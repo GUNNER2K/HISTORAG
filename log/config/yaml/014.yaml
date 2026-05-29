@@ -1,0 +1,9 @@
+model: UNI
+task:
+  category: Retrieval Backend
+  subtask: FAISS IVF (nprobe=20)
+metrics:
+  precision_at_5: 0.95
+  precision_at_10: 0.94
+  mAP: 0.972
+  latency_ms: 1.58

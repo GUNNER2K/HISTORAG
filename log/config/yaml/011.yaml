@@ -1,0 +1,9 @@
+model: UNI
+task:
+  category: Retrieval Backend
+  subtask: FAISS Flat
+metrics:
+  precision_at_5: 0.96
+  precision_at_10: 0.95
+  mAP: 0.974
+  latency_ms: 8.68

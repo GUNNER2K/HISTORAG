@@ -1,0 +1,24 @@
+experiment_id,model,task,subtask,status,precision_at_5,precision_at_10,mAP,latency_ms,notes
+001,UNI,Patch Extraction,Tissue Segmentation + Feature Extraction,Success,N/A,N/A,N/A,N/A,Generated initial UNI embeddings
+002,UNI,Patch Extraction,Tissue Segmentation + Feature Extraction,Failed,N/A,N/A,N/A,N/A,HDF5 writing interrupted due to storage quota
+003,UNI,Patch Extraction,Tissue Segmentation + Feature Extraction,Success,N/A,N/A,N/A,N/A,Reran after increasing storage quota
+004,UNI,Retrieval MVP,Brute Force Retrieval Prototype,Success,N/A,N/A,N/A,8.52,First end-to-end retrieval pipeline
+005,UNI,Retrieval MVP,Visualization of Top-K Results,Success,N/A,N/A,N/A,N/A,Manual inspection of retrieved patches
+006,UNI,Retrieval MVP,Random Query Evaluation,Success,N/A,N/A,N/A,N/A,Five random query patches tested
+007,UNI,Embedding Analysis,PCA Visualization,Success,N/A,N/A,N/A,N/A,Initial cluster exploration
+008,UNI,Embedding Analysis,t-SNE Visualization,Failed,N/A,N/A,N/A,N/A,N/A
+009,UNI,Embedding Analysis,t-SNE Visualization,Success,N/A,N/A,N/A,N/A,Waste of time
+010,UNI,Retrieval Backend,Brute Force Baseline,Success,0.98,0.95,0.975,4.06,Baseline implementation
+011,UNI,Retrieval Backend,FAISS Flat,Success,0.96,0.95,0.974,8.68,Exact nearest neighbor search
+012,UNI,Retrieval Backend,FAISS IVF (nprobe=5),Success,0.91,0.89,0.951,0.76,Initial IVF configuration
+001,UNI,Patch Extraction,Tissue Segmentation + Feature Extraction,Success,N/A,N/A,N/A,N/A,Generated initial UNI embeddings
+013,UNI,Retrieval Backend,FAISS IVF (nprobe=10),Success,0.94,0.92,0.965,1.01,Improved recall
+014,UNI,Retrieval Backend,FAISS IVF (nprobe=20),Success,0.95,0.94,0.972,1.58,Latency increased slightly
+015,UNI,Retrieval Backend,FAISS HNSW (M=16),Success,0.95,0.94,0.973,0.41,Initial HNSW setup
+016,UNI,Retrieval Backend,FAISS HNSW (M=32),Success,0.97,0.97,0.982,0.26,Best trade-off observed
+017,UNI,Retrieval Backend,Latency Benchmark,Success,N/A,N/A,N/A,N/A,Generated latency comparison plots
+018,UNI,Retrieval Backend,Large Query Benchmark,Failed,N/A,N/A,N/A,N/A,manually aborted
+019,UNI,Retrieval Backend,Large Query Benchmark,Success,0.97,0.96,0.981,0.28,rerun
+020,UNI,Annotation Processing,GeoJSON Parsing,Success,N/A,N/A,N/A,N/A,Loaded tumor annotations
+021,UNI,Annotation Processing,Patch-to-Polygon Mapping,Failed,N/A,N/A,N/A,N/A,N/A
+022,UNI,Annotation Processing,Patch-to-Polygon Mapping,Success,N/A,N/A,N/A,N/A,Verified coordinate alignment

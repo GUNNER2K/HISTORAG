@@ -1,0 +1,5 @@
+model: UNI
+task:
+  category: Retrieval Backend
+  subtask: Latency Benchmark
+metrics: {}

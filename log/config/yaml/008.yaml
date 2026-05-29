@@ -1,0 +1,5 @@
+model: UNI
+task:
+  category: Embedding Analysis
+  subtask: t-SNE Visualization
+metrics: {}

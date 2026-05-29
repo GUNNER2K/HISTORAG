@@ -1,0 +1,6 @@
+model: UNI
+task:
+  category: Retrieval MVP
+  subtask: Brute Force Retrieval Prototype
+metrics:
+  latency_ms: 8.52

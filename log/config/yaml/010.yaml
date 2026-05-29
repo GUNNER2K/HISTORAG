@@ -1,0 +1,9 @@
+model: UNI
+task:
+  category: Retrieval Backend
+  subtask: Brute Force Baseline
+metrics:
+  precision_at_5: 0.98
+  precision_at_10: 0.95
+  mAP: 0.975
+  latency_ms: 4.06

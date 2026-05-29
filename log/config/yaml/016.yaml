@@ -1,0 +1,9 @@
+model: UNI
+task:
+  category: Retrieval Backend
+  subtask: FAISS HNSW (M=32)
+metrics:
+  precision_at_5: 0.97
+  precision_at_10: 0.97
+  mAP: 0.982
+  latency_ms: 0.26

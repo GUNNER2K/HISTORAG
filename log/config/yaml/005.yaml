@@ -1,0 +1,5 @@
+model: UNI
+task:
+  category: Retrieval MVP
+  subtask: Visualization of Top-K Results
+metrics: {}
