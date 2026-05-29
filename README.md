@@ -229,26 +229,17 @@ This is the primary metric used to compare retrieval quality.
 ## Installation
 
 ### Clone Repository
+IMPORTANT: YOU WILL REQUIRE TO USE TRIDENT FOR FEATURE EXTRACTION AND SEGMENTATION.
 
+Create an environment (Python 3.10 or 3.11): conda create -n "trident" python=3.10, and activate it conda activate trident.
+Cloning:
 ```bash
-git clone https://github.com/<username>/historag.git
-cd historag
+git clone https://github.com/mahmoodlab/trident.git && cd trident.
 ```
-
-### Create Environment
-
+Local installation: 
 ```bash
-conda create -n historag python=3.10
-conda activate historag
+pip install -e ..
 ```
-
-### Install Dependencies
-
-```bash
-pip install -r requirements.txt
-```
-
----
 
 ## Running Feature Extraction
 
@@ -337,14 +328,3 @@ Master's Student in Data Science
 Friedrich-Alexander-Universität Erlangen-Nürnberg (FAU)
 
 ---
-
-## Acknowledgements
-
-* BIMAP Project
-* Pattern Recognition Lab (FAU)
-* Trident Framework
-* UNI Foundation Model
-* Virchow Foundation Model
-* CONCH Foundation Model
-* FAU TinyGPU Infrastructure
-* FAU Woody Storage Infrastructure
