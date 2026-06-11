@@ -19,21 +19,21 @@ from shapely.ops import unary_union
 FEATURE_PATHS = {
 
     "CONCH":
-    "/home/woody/iwi5/iwi5411h/BIMAP/data/patches_PT_484/conch/20x_256px_128px_overlap/features_conch_v15/PrimaryTumor_HE_484.h5",
+    "/home/hpc/iwi5/iwi5411h/bimap/demo_data/sample_conch.h5",
 
     "UNI2":
-    "/home/woody/iwi5/iwi5411h/BIMAP/data/patches_PT_484/uni2/20x_256px_128px_overlap/features_uni_v2/PrimaryTumor_HE_484.h5",
+    "/home/hpc/iwi5/iwi5411h/bimap/demo_data/sample_uni2.h5",
 
     "VIRCHOW":
-    "/home/woody/iwi5/iwi5411h/BIMAP/data/patches_PT_484/virchow/20x_256px_128px_overlap/features_virchow/PrimaryTumor_HE_484.h5"
+    "/home/hpc/iwi5/iwi5411h/bimap/demo_data/sample_virchow.h5"
 
 }
 
 WSI_PATH = "/home/woody/iwi5/iwi5411h/BIMAP/data/WSI_PrimaryTumor_CUP/PrimaryTumor_HE_484.svs"
 
-GEOJSON_PATH = "/home/woody/iwi5/iwi5411h/BIMAP/data/WSI_PrimaryTumor_Annotations/PrimaryTumor_HE_484.geojson"
+GEOJSON_PATH = "/home/hpc/iwi5/iwi5411h/bimap/demo_data/sample_annotations.geojson"
 
-RESULTS_DIR = "/home/woody/iwi5/iwi5411h/BIMAP/results/comparison/foundation_models"
+RESULTS_DIR = "/home/hpc/iwi5/iwi5411h/bimap/results"
 
 os.makedirs(RESULTS_DIR, exist_ok=True)
 

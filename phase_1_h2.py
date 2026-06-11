@@ -16,13 +16,13 @@ from shapely.ops import unary_union
 # PATHS
 # ============================================================
 
-H5_PATH = "/home/woody/iwi5/iwi5411h/BIMAP/data/patches_PT_484/uni_dense/20x_256px_128px_overlap/features_uni_v1/PrimaryTumor_HE_484.h5"
+H5_PATH = "/home/hpc/iwi5/iwi5411h/bimap/demo_data/sample_uni.h5"
 
 WSI_PATH = "/home/woody/iwi5/iwi5411h/BIMAP/data/WSI_PrimaryTumor_CUP/PrimaryTumor_HE_484.svs"
 
-GEOJSON_PATH = "/home/woody/iwi5/iwi5411h/BIMAP/data/WSI_PrimaryTumor_Annotations/PrimaryTumor_HE_484.geojson"
+GEOJSON_PATH = "/home/hpc/iwi5/iwi5411h/bimap/demo_data/sample_annotations.geojson"
 
-RESULTS_DIR = "/home/woody/iwi5/iwi5411h/BIMAP/results/comparison/uni"
+RESULTS_DIR = "/home/hpc/iwi5/iwi5411h/bimap/results/comparison/uni"
 
 os.makedirs(RESULTS_DIR, exist_ok=True)
 
