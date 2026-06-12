@@ -52,42 +52,27 @@ Potential applications include:
 7. Retrieval evaluation
 8. Visualization and analysis
 
+** The first 4 are not included for simplicity purposes
 ---
 
-## Repository Structure
+### Repository Structure
 
 ```text
-historag/
+HISTORAG/
 │
-├── src/
-│   ├── retrieval/
-│   ├── evaluation/
-│   ├── visualization/
-│   ├── preprocessing/
-│   └── utilities/
-│
-├── scripts/
-│   ├── extraction/
-│   ├── retrieval/
-│   └── evaluation/
-│
-├── configs/
-│   └── experiment yaml files
-│
-├── experiment_logs/
-│   └── experiments.csv
-│
-├── figures/
-│   ├── retrieval_examples/
-│   ├── latency_plots/
-│   └── embedding_visualizations/
-│
-├── README.md
+├── demo_data/                 # Lightweight reproducible demo dataset
+├── results/                   # Generated experiment outputs
+├── mvp.py                      # Baseline MVP
+├── phase_1.py              # Hypothesis 1: Retrieval latency comparison
+├── phase_1_h2.py              # Hypothesis 2: Annotation-aware retrieval evaluation
+├── phase_1_h3.py              # Hypothesis 3: Foundation model comparison
+├── embeddings_2D_3D.py              # Hypothesis 4: Embedding-space visualization
+├── alignment_verification.py  # Coordinate alignment verification
 ├── requirements.txt
-└── .gitignore
+└── README.md
 ```
-
 ---
+
 
 ## Dataset
 
@@ -99,23 +84,69 @@ The repository does not contain the raw datasets because:
 * Embedding files can exceed GitHub storage limits
 * Dataset redistribution may be restricted
 
-Users should download datasets separately and update the corresponding paths in the configuration files.
+For reproducibility purposes, lightweight demo data has been created and stored in [`demo_data/`](demo_data/).
 
 ---
 
+
 ## Foundation Models Evaluated
 
-### UNI
+Links, installation instructions, and usage details for all models can be found at:  
+https://github.com/mahmoodlab/Trident?tab=readme-ov-file
 
-Pathology foundation model used as the initial MVP encoder.
+The project evaluates multiple pathology foundation models for patch-level feature extraction and retrieval-based representation learning on Whole Slide Images (WSIs). All embeddings were extracted at 20x magnification using 256×256 tissue patches.
+
+---
+
+### UNI and UNI-2
+
+UNI and UNI-2 were used as the primary baseline pathology foundation models throughout the project.
+
+* Vision Transformer (ViT)-based pathology encoders
+* Used for:
+  * patch feature extraction
+  * retrieval benchmarking
+  * annotation-aware retrieval evaluation
+  * embedding-space visualization
+* Generated high-dimensional semantic embeddings for each tissue patch
+* Embedding dimensions:
+  * UNI: 1024-dimensional feature vectors
+  * UNI-2: 1536-dimensional feature vectors
+
+UNI was used for the initial MVP retrieval system and for developing the retrieval evaluation pipeline.
+
+---
 
 ### Virchow
 
-Large-scale pathology foundation model evaluated for embedding quality.
+Virchow is a large-scale pathology foundation model trained on extensive histopathology data.
+
+* Evaluated for embedding quality and feature separability
+* Used in comparative experiments against UNI and CONCH
+* Strong semantic clustering observed in embedding-space visualization
+* Generated:
+  * 2560-dimensional feature embeddings
+
+Virchow embeddings were evaluated using:
+* brute-force retrieval
+* FAISS-based approximate nearest neighbor retrieval
+* t-SNE embedding-space visualization
+
+---
 
 ### CONCH
 
-Pathology vision-language foundation model evaluated for retrieval performance.
+CONCH is a pathology vision-language foundation model designed for multimodal histopathology representation learning.
+
+* Evaluated for retrieval robustness and embedding separability
+* Used in:
+  * retrieval experiments
+  * annotation-aware evaluation
+  * embedding-space comparison
+* Generated:
+  * 512-dimensional feature embeddings
+
+CONCH demonstrated competitive retrieval performance while maintaining a significantly smaller embedding dimensionality compared to larger pathology encoders.
 
 ---
 
@@ -138,8 +169,10 @@ This MVP serves as the foundation for all subsequent experiments.
 ## Hypothesis 1: Better Retrieval Methods Improve Similarity Search
 
 Approximate Nearest Neighbor (ANN) retrieval methods such as FAISS-HNSW can significantly reduce retrieval latency compared to brute-force similarity search while maintaining retrieval quality.
+
 Code: [`phase_1.py`](phase_1.py).
 Output: [`results/h1`](results/h1).
+
 ### Experiments
 
 * Brute-force retrieval
@@ -150,12 +183,13 @@ Output: [`results/h1`](results/h1).
 ### Evaluation Metrics
 
 * Retrieval latency
-* Precision@k
-* Mean Average Precision (mAP)
 
 ---
 
 ## Hypothesis 2: Retrieval Quality Can Be Quantitatively Measured
+
+Code: [`phase_1_h2.py`](phase_1_h2.py).
+Output: [`results/h2`](results/h2).
 
 The quality of histopathology patch retrieval can be objectively evaluated using quantitative retrieval metrics.
 
@@ -170,16 +204,16 @@ The quality of histopathology patch retrieval can be objectively evaluated using
 
 * Precision@5
 * Precision@10
-* Recall@5
-* Recall@10
-* Average Precision (AP)
 * Mean Average Precision (mAP)
 
 ---
 
-## Hypothesis 3: Foundation Models Capture Biological Structure Differently
+## Hypothesis 3 and 4: Foundation Models Capture Biological Structure Differently
 
 Different pathology foundation models may produce embeddings with varying retrieval performance and representation quality.
+
+Code: [`phase_1_h3.py`](phase_1_h3.py) and [`embeddings_2D_3D`](embeddings_2D_3D)
+Output: [`results/h4`](results/h4).
 
 ### Experiments
 
@@ -281,23 +315,6 @@ python -c "import openslide; print('OpenSlide installed successfully')"
 
 ---
 
-### Repository Structure
-
-```text
-HISTORAG/
-│
-├── demo_data/                 # Lightweight reproducible demo dataset
-├── results/                   # Generated experiment outputs
-├── phase_1_h1.py              # Hypothesis 1: Retrieval latency comparison
-├── phase_1_h2.py              # Hypothesis 2: Annotation-aware retrieval evaluation
-├── phase_1_h3.py              # Hypothesis 3: Foundation model comparison
-├── phase_1_h4.py              # Hypothesis 4: Embedding-space visualization
-├── alignment_verification.py  # Coordinate alignment verification
-├── requirements.txt
-└── README.md
-```
-
----
 
 ### Run Example Experiments
 
