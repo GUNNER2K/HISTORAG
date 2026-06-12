@@ -19,9 +19,7 @@ np.random.seed(42)
 # PATHS
 # ============================================================
 
-ROOT_DIR = Path(
-    "/home/hpc/iwi5/iwi5411h/bimap"
-)
+ROOT_DIR = Path(__file__).resolve().parent
 
 H5_PATH = (
     ROOT_DIR
