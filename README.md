@@ -86,15 +86,19 @@ The repository does not contain the raw datasets because:
 
 For reproducibility purposes, lightweight demo data has been created and stored in [`demo_data/`](demo_data/).
 
+* Original WSI (Primary tumor slides (CUP)): https://www.hancock.research.fau.eu/download
+* Primary tumor annotations (slide number HE_484): https://www.hancock.research.fau.eu/download
+
 ---
 
 
 ## Foundation Models Evaluated
 
-Links, installation instructions, and usage details for all models can be found at:  
+Links, installation guides, and usage details for all models can be found at:  
+
 https://github.com/mahmoodlab/Trident?tab=readme-ov-file
 
-The project evaluates multiple pathology foundation models for patch-level feature extraction and retrieval-based representation learning on Whole Slide Images (WSIs). All embeddings were extracted at 20x magnification using 256×256 tissue patches.
+The project evaluates multiple pathology foundation models for patch-level feature extraction and retrieval-based representation learning on Whole Slide Images (WSIs). All embeddings were extracted at 20x magnification using 256×256 tissue patches with 128 px overlap for dense patches.
 
 ---
 
@@ -150,7 +154,10 @@ CONCH demonstrated competitive retrieval performance while maintaining a signifi
 
 ---
 
-## MVP Implementation
+## MVP Implementation 
+
+Code: [`mvp.py`](mvp.py).
+Output: [`results/mvp`](results/mvp).
 
 The initial MVP consists of:
 
