@@ -328,7 +328,7 @@ python -c "import openslide; print('OpenSlide installed successfully')"
 #### Hypothesis 1 — Retrieval Latency Comparison
 
 ```bash
-python phase_1_h1.py
+python phase_1.py
 ```
 
 ---
@@ -352,7 +352,7 @@ python phase_1_h3.py
 #### Hypothesis 4 — Embedding Space Visualization
 
 ```bash
-python phase_1_h4.py
+python embeddings_2D_3D.py
 ```
 
 ---
@@ -365,14 +365,13 @@ All generated figures, plots, retrieval visualizations, and embedding-space anal
 results/
 ```
 
-```
 ---
 
 ## Author
 
 Satyaki Bhattacharjee
 
-Master's Student in Data Science
+Master's (M.Sc.) Student in Data Science
 
 Friedrich-Alexander-Universität Erlangen-Nürnberg (FAU)
 
