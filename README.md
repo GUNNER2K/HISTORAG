@@ -86,6 +86,14 @@ The repository does not contain the raw datasets because:
 
 For reproducibility purposes, lightweight demo data has been created and stored in [`demo_data/`](demo_data/).
 
+!! To run and replicate the results, PLEASE USE --demo at the end, for example 
+
+```bash
+python mvp.py --demo
+```
+This ensures that the experiments are run on the demo data and not on the whole dataset.
+
+
 * Original WSI (Primary tumor slides (CUP)): https://www.hancock.research.fau.eu/download
 * Primary tumor annotations (slide number HE_484): https://www.hancock.research.fau.eu/download
 
@@ -325,10 +333,13 @@ python -c "import openslide; print('OpenSlide installed successfully')"
 
 ### Run Example Experiments
 
+!! important !!
+Please use --demo, it ensures that the experiments are run using the demo data and not on the whole dataset.
+
 #### Hypothesis 1 — Retrieval Latency Comparison
 
 ```bash
-python phase_1.py
+python phase_1.py --demo
 ```
 
 ---
@@ -336,7 +347,7 @@ python phase_1.py
 #### Hypothesis 2 — Annotation-Aware Retrieval Evaluation
 
 ```bash
-python phase_1_h2.py
+python phase_1_h2.py --demo
 ```
 
 ---
@@ -344,7 +355,7 @@ python phase_1_h2.py
 #### Hypothesis 3 — Foundation Model Comparison
 
 ```bash
-python phase_1_h3.py
+python phase_1_h3.py --demo
 ```
 
 ---
@@ -352,7 +363,7 @@ python phase_1_h3.py
 #### Hypothesis 4 — Embedding Space Visualization
 
 ```bash
-python embeddings_2D_3D.py
+python embeddings_2D_3D.py --demo
 ```
 
 ---
