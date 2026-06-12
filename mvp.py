@@ -9,6 +9,21 @@ from PIL import Image
 from pathlib import Path
 
 # ============================================================
+# CONFIG SELECTION
+# ============================================================
+
+# USE_DEMO = True
+
+# if USE_DEMO:
+
+#     from configs.demo_config import *
+
+# else:
+
+#     from configs.full_config import *
+
+
+# ============================================================
 # REPRODUCIBILITY
 # ============================================================
 
@@ -21,28 +36,13 @@ np.random.seed(42)
 
 ROOT_DIR = Path(__file__).resolve().parent
 
-H5_PATH = (
-    ROOT_DIR
-    / "demo_data"
-    / "sample_uni.h5"
-)
+H5_PATH = ROOT_DIR / "demo_data" / "sample_uni.h5"
 
-WSI_PATH = (
-    ROOT_DIR
-    / "demo_data"
-    / "small_sample_wsi.jpg"
-)
+WSI_PATH = ROOT_DIR / "demo_data" / "small_sample_wsi.jpg"
 
-RESULTS_DIR = (
-    ROOT_DIR
-    / "results"
-    / "mvp"
-)
+RESULTS_DIR = ROOT_DIR / "results" / "mvp"
 
-os.makedirs(
-    RESULTS_DIR,
-    exist_ok=True
-)
+os.makedirs(RESULTS_DIR, exist_ok=True)
 
 PATCH_SIZE = 256
 TOP_K = 10
@@ -57,64 +57,36 @@ def load_h5(path):
     print(f"\nLoading features from: {path}")
 
     with h5py.File(path, 'r') as f:
-
         features = f['features'][:]
         coords = f['coords'][:]
 
-    print(
-        "Features shape:",
-        features.shape
-    )
-
-    print(
-        "Coords shape:",
-        coords.shape
-    )
+    print("Features shape:", features.shape)
+    print("Coords shape:", coords.shape)
 
     return features, coords
 
-# ============================================================
-# START TIMER
-# ============================================================
 
 start_time = time.time()
 
-# ============================================================
-# LOAD FEATURES
-# ============================================================
-
 X, coords = load_h5(H5_PATH)
 
-# ============================================================
-# NORMALIZATION
-# ============================================================
-
-print("\nNormalizing features...")
+print("\nNormalizing features")
 
 X = X.astype(np.float32)
 
-X = X / np.linalg.norm(
-    X,
-    axis=1,
-    keepdims=True
-)
+X = X / np.linalg.norm(X, axis=1, keepdims=True)
 
 # ============================================================
 # LOAD DEMO WSI PNG
 # ============================================================
 
-print("\nLoading sample_wsi.png...")
+print("\nLoading sample_wsi.png")
 
-wsi_img = Image.open(
-    WSI_PATH
-).convert("RGB")
+wsi_img = Image.open(WSI_PATH).convert("RGB")
 
 wsi_img = np.array(wsi_img)
 
-print(
-    "Demo image shape:",
-    wsi_img.shape
-)
+print("Demo image shape:", wsi_img.shape)
 
 # ============================================================
 # PATCH EXTRACTION
@@ -127,10 +99,7 @@ def get_patch(idx):
     x = int(x)
     y = int(y)
 
-    patch = wsi_img[
-        y:y+PATCH_SIZE,
-        x:x+PATCH_SIZE
-    ]
+    patch = wsi_img[y:y + PATCH_SIZE, x:x + PATCH_SIZE]
 
     return patch
 
@@ -140,65 +109,34 @@ def get_patch(idx):
 
 def retrieve(query_idx, top_k=10):
 
-    print(
-        f"\nRunning retrieval "
-        f"for query index: {query_idx}"
-    )
+    print(f"\nRunning retrieval for query index: {query_idx}")
 
     q = X[query_idx]
 
     sims = X @ q
 
-    indices = np.argsort(
-        -sims
-    )[:top_k + 1]
+    indices = np.argsort(-sims)[:top_k + 1]
 
     # remove query itself
 
-    indices = indices[
-        indices != query_idx
-    ][:top_k]
+    indices = indices[indices != query_idx][:top_k]
 
-    print(
-        "Retrieved indices:",
-        indices
-    )
+    print("Retrieved indices:", indices)
 
     return indices
 
-# ============================================================
-# VISUALIZATION
-# ============================================================
 
-def visualize(
+def visualize(query_idx, retrieved_indices, save_path):
 
-    query_idx,
-    retrieved_indices,
-    save_path
+    print(f"\nSaving visualization to:\n{save_path}")
 
-):
-
-    print(
-        f"\nSaving visualization to:"
-        f"\n{save_path}"
-    )
-
-    fig, axes = plt.subplots(
-
-        1,
-        TOP_K + 1,
-
-        figsize=(20, 4)
-
-    )
+    fig, axes = plt.subplots(1, TOP_K + 1, figsize=(20, 4))
 
     # --------------------------------------------------------
     # QUERY
     # --------------------------------------------------------
 
-    axes[0].imshow(
-        get_patch(query_idx)
-    )
+    axes[0].imshow(get_patch(query_idx))
 
     axes[0].set_title("QUERY")
 
@@ -210,78 +148,37 @@ def visualize(
 
     for i, idx in enumerate(retrieved_indices):
 
-        axes[i + 1].imshow(
-            get_patch(idx)
-        )
+        axes[i + 1].imshow(get_patch(idx))
 
-        axes[i + 1].set_title(
-            f"Top-{i+1}"
-        )
+        axes[i + 1].set_title(f"Top-{i+1}")
 
         axes[i + 1].axis("off")
 
     plt.tight_layout()
 
-    plt.savefig(
-        save_path,
-        dpi=300
-    )
+    plt.savefig(save_path, dpi=300)
 
     plt.close()
 
-# ============================================================
-# RETRIEVAL EXPERIMENTS
-# ============================================================
 
 print("\nStarting MVP retrieval...\n")
 
 for i in range(NUM_QUERIES):
 
-    print(
-        f"\n================ "
-        f"QUERY {i+1} "
-        f"================"
-    )
+    print(f"\n================ QUERY {i+1} ================")
 
-    query_idx = np.random.randint(
-        0,
-        len(X)
-    )
+    query_idx = np.random.randint(0, len(X))
 
-    retrieved_indices = retrieve(
-        query_idx,
-        top_k=TOP_K
-    )
+    retrieved_indices = retrieve(query_idx, top_k=TOP_K)
 
-    save_path = os.path.join(
+    save_path = os.path.join(RESULTS_DIR, f"query_{i+1}.png")
 
-        RESULTS_DIR,
-        f"query_{i+1}.png"
-
-    )
-
-    visualize(
-
-        query_idx,
-        retrieved_indices,
-        save_path
-
-    )
-
-# ============================================================
-# FINISH
-# ============================================================
+    visualize(query_idx, retrieved_indices, save_path)
 
 end_time = time.time()
 
 print("\nFinished all queries.")
 
-print(
-    f"Total runtime: "
-    f"{end_time - start_time:.2f} seconds"
-)
+print(f"Total runtime: {end_time - start_time:.2f} seconds")
 
-print(
-    f"Results saved in:\n"
-    f"{RESULTS_DIR}"
-)
+print(f"Results saved in:\n{RESULTS_DIR}")

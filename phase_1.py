@@ -9,54 +9,114 @@ import matplotlib.pyplot as plt
 from pathlib import Path
 
 # ============================================================
+# CONFIG SELECTION
+# ============================================================
+
+USE_DEMO = False
+
+if USE_DEMO:
+
+    from configs.demo_config import *
+
+else:
+
+    from configs.full_config import *
+
+# ============================================================
 # REPRODUCIBILITY
 # ============================================================
 
-random.seed(42)
-np.random.seed(42)
+random.seed(RANDOM_SEED)
+np.random.seed(RANDOM_SEED)
 
 # ============================================================
-# PATHS
+# CREATE RESULTS DIRECTORY
 # ============================================================
 
-ROOT_DIR = Path(__file__).resolve().parent
-
-H5_PATH = (
-    ROOT_DIR
-    / "demo_data"
-    / "sample_uni.h5"
-)
-
-RESULTS_DIR = (
-    ROOT_DIR
-    / "results"
-    / "h1"
-)
+RESULTS_DIR = Path(RESULTS_DIR) / "h1"
 
 os.makedirs(
     RESULTS_DIR,
     exist_ok=True
 )
 
-NUM_QUERIES = 20
-
 # ============================================================
-# LOAD H5
+# LOAD SINGLE H5
 # ============================================================
 
-print("\nLoading demo H5...")
+def load_h5(path):
 
-with h5py.File(H5_PATH, 'r') as f:
+    with h5py.File(path, 'r') as f:
 
-    features = f["features"][:]
-    coords = f["coords"][:]
+        features = f["features"][:]
+        coords = f["coords"][:]
 
-print("Features:", features.shape)
-print("Coords:", coords.shape)
+    return features, coords
 
 # ============================================================
-# NORMALIZATION
+# DEMO MODE
 # ============================================================
+
+if not USE_DEMO == False:
+
+    print("\n================================================")
+    print("RUNNING DEMO MODE")
+    print("================================================")
+
+    features, coords = load_h5(H5_PATH)
+
+# ============================================================
+# FULL MODE
+# ============================================================
+
+else:
+
+    print("\n================================================")
+    print("RUNNING FULL MODE")
+    print("================================================")
+
+    all_h5_files = list(
+        H5_ROOT.rglob("*.h5")
+    )
+
+    if MAX_WSIS is not None:
+
+        all_h5_files = all_h5_files[:MAX_WSIS]
+
+    all_features = []
+
+    total_wsis = 0
+
+    for h5_file in all_h5_files:
+
+        try:
+
+            print(f"\nLoading: {h5_file.name}")
+
+            features_i, _ = load_h5(h5_file)
+
+            all_features.append(
+                features_i
+            )
+
+            total_wsis += 1
+
+        except Exception as e:
+
+            print(f"Skipping {h5_file.name}")
+            print(e)
+
+    features = np.vstack(
+        all_features
+    )
+
+    print(f"\nLoaded WSIs: {total_wsis}")
+
+# ============================================================
+# FEATURE NORMALIZATION
+# ============================================================
+
+print("\nNormalizing features...")
 
 features = features.astype(
     np.float32
@@ -70,8 +130,10 @@ features = features / np.linalg.norm(
 
 )
 
+print("\nFinal feature matrix:", features.shape)
+
 # ============================================================
-# RETRIEVAL BASE
+# RETRIEVAL BASE CLASS
 # ============================================================
 
 class RetrievalEngine:
@@ -86,23 +148,15 @@ class RetrievalEngine:
 # BRUTE FORCE
 # ============================================================
 
-class BruteForceRetrieval(
-    RetrievalEngine
-):
+class BruteForceRetrieval(RetrievalEngine):
 
     def fit(self, X):
 
         self.X = X
 
-        print(
-            "\nBrute Force ready"
-        )
+        print("\nBrute Force ready")
 
-    def retrieve(
-        self,
-        q,
-        k
-    ):
+    def retrieve(self, q, k):
 
         sims = self.X @ q
 
@@ -110,18 +164,13 @@ class BruteForceRetrieval(
             -sims
         )[:k]
 
-        return (
-            indices,
-            sims[indices]
-        )
+        return indices, sims[indices]
 
 # ============================================================
 # FAISS FLAT
 # ============================================================
 
-class FAISSFlatRetrieval(
-    RetrievalEngine
-):
+class FAISSFlatRetrieval(RetrievalEngine):
 
     def fit(self, X):
 
@@ -131,15 +180,9 @@ class FAISSFlatRetrieval(
 
         self.index.add(X)
 
-        print(
-            "\nFAISS Flat ready"
-        )
+        print("\nFAISS Flat ready")
 
-    def retrieve(
-        self,
-        q,
-        k
-    ):
+    def retrieve(self, q, k):
 
         scores, indices = self.index.search(
 
@@ -148,18 +191,13 @@ class FAISSFlatRetrieval(
 
         )
 
-        return (
-            indices[0],
-            scores[0]
-        )
+        return indices[0], scores[0]
 
 # ============================================================
 # FAISS IVF
 # ============================================================
 
-class FAISSIVFRetrieval(
-    RetrievalEngine
-):
+class FAISSIVFRetrieval(RetrievalEngine):
 
     def fit(self, X):
 
@@ -178,9 +216,7 @@ class FAISSIVFRetrieval(
 
         )
 
-        print(
-            "\nTraining IVF..."
-        )
+        print("\nTraining IVF...")
 
         self.index.train(X)
 
@@ -188,15 +224,9 @@ class FAISSIVFRetrieval(
 
         self.index.nprobe = 5
 
-        print(
-            "\nFAISS IVF ready"
-        )
+        print("\nFAISS IVF ready")
 
-    def retrieve(
-        self,
-        q,
-        k
-    ):
+    def retrieve(self, q, k):
 
         scores, indices = self.index.search(
 
@@ -205,18 +235,13 @@ class FAISSIVFRetrieval(
 
         )
 
-        return (
-            indices[0],
-            scores[0]
-        )
+        return indices[0], scores[0]
 
 # ============================================================
 # FAISS HNSW
 # ============================================================
 
-class FAISSHNSWRetrieval(
-    RetrievalEngine
-):
+class FAISSHNSWRetrieval(RetrievalEngine):
 
     def fit(self, X):
 
@@ -231,15 +256,9 @@ class FAISSHNSWRetrieval(
 
         self.index.add(X)
 
-        print(
-            "\nFAISS HNSW ready"
-        )
+        print("\nFAISS HNSW ready")
 
-    def retrieve(
-        self,
-        q,
-        k
-    ):
+    def retrieve(self, q, k):
 
         D, I = self.index.search(
 
@@ -248,10 +267,7 @@ class FAISSHNSWRetrieval(
 
         )
 
-        return (
-            I[0],
-            D[0]
-        )
+        return I[0], D[0]
 
 # ============================================================
 # RETRIEVAL METHODS
@@ -274,23 +290,23 @@ retrievers = {
 }
 
 # ============================================================
-# EXPERIMENTS
+# RUN EXPERIMENTS
 # ============================================================
 
 latency_results = {}
 
 for name, retriever in retrievers.items():
 
-    print("\n" + "="*50)
+    print("\n" + "=" * 50)
     print(name)
-    print("="*50)
+    print("=" * 50)
 
     retriever.fit(features)
 
     latencies = []
 
     # --------------------------------------------------------
-    # MULTIPLE RANDOM QUERIES
+    # RANDOM QUERIES
     # --------------------------------------------------------
 
     for _ in range(NUM_QUERIES):
@@ -299,24 +315,22 @@ for name, retriever in retrievers.items():
             len(features)
         )
 
-        query = features[
-            query_idx
-        ]
+        query = features[query_idx]
 
         start = time.time()
 
         retrieved, scores = retriever.retrieve(
             query,
-            10
+            TOP_K
         )
 
         latency = (
+
             time.time() - start
+
         ) * 1000
 
-        latencies.append(
-            latency
-        )
+        latencies.append(latency)
 
     avg_latency = np.mean(
         latencies
@@ -330,7 +344,7 @@ for name, retriever in retrievers.items():
     )
 
 # ============================================================
-# SORT BY LATENCY
+# SORT FOR VISUALIZATION
 # ============================================================
 
 sorted_items = sorted(
@@ -343,21 +357,15 @@ sorted_items = sorted(
 
 )
 
-methods = [
-    x[0]
-    for x in sorted_items
-]
+methods = [x[0] for x in sorted_items]
 
-latencies = [
-    x[1]
-    for x in sorted_items
-]
+latencies = [x[1] for x in sorted_items]
 
 # ============================================================
-# LATENCY BARPLOT
+# BARPLOT
 # ============================================================
 
-plt.figure(figsize=(8,5))
+plt.figure(figsize=(8, 5))
 
 plt.bar(
     methods,
@@ -367,29 +375,24 @@ plt.bar(
 for i, v in enumerate(latencies):
 
     plt.text(
-
         i,
         v,
         f"{v:.2f}",
-
         ha='center'
-
     )
 
 plt.ylabel("Latency (ms)")
 
 plt.xlabel("Retrieval Method")
 
-plt.title(
-    "Latency Comparison"
-)
+plt.title("Retrieval Latency Comparison")
 
 plt.tight_layout()
 
-save_path = os.path.join(
+save_path = (
 
-    RESULTS_DIR,
-    "latency_comparison.png"
+    RESULTS_DIR
+    / "latency_comparison.png"
 
 )
 
@@ -404,10 +407,10 @@ plt.close()
 # SAVE SUMMARY
 # ============================================================
 
-summary_path = os.path.join(
+summary_path = (
 
-    RESULTS_DIR,
-    "latency_summary.txt"
+    RESULTS_DIR
+    / "latency_summary.txt"
 
 )
 

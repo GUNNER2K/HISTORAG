@@ -28,43 +28,19 @@ np.random.seed(42)
 ROOT_DIR = Path(__file__).resolve().parent
 
 FEATURE_PATHS = {
-
-    "CONCH":
-    ROOT_DIR / "demo_data" / "sample_conch.h5",
-
-    "UNI2":
-    ROOT_DIR / "demo_data" / "sample_uni2.h5",
-
-    "VIRCHOW":
-    ROOT_DIR / "demo_data" / "sample_virchow.h5",
-
-    "UNI":
-    ROOT_DIR / "demo_data" / "sample_uni.h5"
-
+    "CONCH": ROOT_DIR / "demo_data" / "sample_conch.h5",
+    "UNI2": ROOT_DIR / "demo_data" / "sample_uni2.h5",
+    "VIRCHOW": ROOT_DIR / "demo_data" / "sample_virchow.h5",
+    "UNI": ROOT_DIR / "demo_data" / "sample_uni.h5"
 }
 
-WSI_PATH = (
-    ROOT_DIR
-    / "demo_data"
-    / "small_sample_wsi.jpg"
-)
+WSI_PATH = ROOT_DIR / "demo_data" / "small_sample_wsi.jpg"
 
-GEOJSON_PATH = (
-    ROOT_DIR
-    / "demo_data"
-    / "sample_annotations.geojson"
-)
+GEOJSON_PATH = ROOT_DIR / "demo_data" / "sample_annotations.geojson"
 
-RESULTS_DIR = (
-    ROOT_DIR
-    / "results"
-    / "h3"
-)
+RESULTS_DIR = ROOT_DIR / "results" / "h3"
 
-os.makedirs(
-    RESULTS_DIR,
-    exist_ok=True
-)
+os.makedirs(RESULTS_DIR, exist_ok=True)
 
 PATCH_SIZE = 256
 TOP_K = 15
@@ -77,16 +53,13 @@ NUM_QUERIES = 10
 print("\nLoading GeoJSON...")
 
 with open(GEOJSON_PATH, "r") as f:
-
     geo = json.load(f)
 
 polygons = []
 
 for feature in geo["features"]:
 
-    geom = shape(
-        feature["geometry"]
-    )
+    geom = shape(feature["geometry"])
 
     polygons.append(geom)
 
@@ -100,9 +73,7 @@ print("Tumor polygons loaded")
 
 print("\nLoading demo WSI PNG...")
 
-wsi_img = Image.open(
-    WSI_PATH
-).convert("RGB")
+wsi_img = Image.open(WSI_PATH).convert("RGB")
 
 wsi_img = np.array(wsi_img)
 
@@ -112,14 +83,7 @@ print("Demo image shape:", wsi_img.shape)
 # RETRIEVAL METHODS
 # ============================================================
 
-RETRIEVAL_METHODS = [
-
-    "BruteForce",
-    "FAISSFlat",
-    "FAISSIVF",
-    "FAISSHNSW"
-
-]
+RETRIEVAL_METHODS = ["BruteForce", "FAISSFlat", "FAISSIVF", "FAISSHNSW"]
 
 # ============================================================
 # METRICS
@@ -129,9 +93,7 @@ def precision_at_k(retrieved_indices, labels, k):
 
     retrieved = retrieved_indices[:k]
 
-    relevant = np.sum(
-        labels[retrieved] == 1
-    )
+    relevant = np.sum(labels[retrieved] == 1)
 
     return relevant / k
 
@@ -142,21 +104,15 @@ def average_precision(retrieved_indices, labels):
 
     relevant_count = 0
 
-    for rank, idx in enumerate(
-        retrieved_indices,
-        start=1
-    ):
+    for rank, idx in enumerate(retrieved_indices, start=1):
 
         if labels[idx] == 1:
 
             relevant_count += 1
 
-            precisions.append(
-                relevant_count / rank
-            )
+            precisions.append(relevant_count / rank)
 
     if len(precisions) == 0:
-
         return 0
 
     return np.mean(precisions)
@@ -168,15 +124,11 @@ def average_precision(retrieved_indices, labels):
 class BruteForce:
 
     def __init__(self, X):
-
         self.X = X
 
     def search(self, q, k):
-
         sims = self.X @ q
-
         idx = np.argsort(-sims)[:k]
-
         return idx
 
 
@@ -209,14 +161,7 @@ class FAISSIVF:
 
         quantizer = faiss.IndexFlatIP(d)
 
-        self.index = faiss.IndexIVFFlat(
-
-            quantizer,
-            d,
-            nlist,
-            faiss.METRIC_INNER_PRODUCT
-
-        )
+        self.index = faiss.IndexIVFFlat(quantizer, d, nlist, faiss.METRIC_INNER_PRODUCT)
 
         self.index.train(X)
 
@@ -239,10 +184,7 @@ class FAISSHNSW:
 
         d = X.shape[1]
 
-        self.index = faiss.IndexHNSWFlat(
-            d,
-            32
-        )
+        self.index = faiss.IndexHNSWFlat(d, 32)
 
         self.index.hnsw.efConstruction = 40
 
@@ -262,25 +204,13 @@ class FAISSHNSW:
 
 all_results = {}
 
-heatmap_matrix = np.zeros(
-
-    (
-        len(FEATURE_PATHS),
-        len(RETRIEVAL_METHODS)
-    )
-
-)
+heatmap_matrix = np.zeros((len(FEATURE_PATHS), len(RETRIEVAL_METHODS)))
 
 # ============================================================
 # MAIN LOOP
 # ============================================================
 
-for model_idx, (
-
-    model_name,
-    h5_path
-
-) in enumerate(FEATURE_PATHS.items()):
+for model_idx, (model_name, h5_path) in enumerate(FEATURE_PATHS.items()):
 
     print("\n================================================")
     print(f"PROCESSING MODEL: {model_name}")
@@ -291,9 +221,7 @@ for model_idx, (
     # --------------------------------------------------------
 
     with h5py.File(h5_path, "r") as f:
-
         coords = f["coords"][:]
-
         features = f["features"][:]
 
     print("Coords:", coords.shape)
@@ -303,17 +231,9 @@ for model_idx, (
     # NORMALIZE FEATURES
     # --------------------------------------------------------
 
-    features = features.astype(
-        np.float32
-    )
+    features = features.astype(np.float32)
 
-    features = features / np.linalg.norm(
-
-        features,
-        axis=1,
-        keepdims=True
-
-    )
+    features = features / np.linalg.norm(features, axis=1, keepdims=True)
 
     # --------------------------------------------------------
     # LABEL PATCHES
@@ -326,27 +246,17 @@ for model_idx, (
         center_x = x + PATCH_SIZE / 2
         center_y = y + PATCH_SIZE / 2
 
-        pt = Point(
-            center_x,
-            center_y
-        )
+        pt = Point(center_x, center_y)
 
         inside = tumor_region.contains(pt)
 
-        labels.append(
-            int(inside)
-        )
+        labels.append(int(inside))
 
     labels = np.array(labels)
 
-    tumor_indices = np.where(
-        labels == 1
-    )[0]
+    tumor_indices = np.where(labels == 1)[0]
 
-    print(
-        "Tumor patches:",
-        len(tumor_indices)
-    )
+    print("Tumor patches:", len(tumor_indices))
 
     # --------------------------------------------------------
     # PATCH EXTRACTION
@@ -359,10 +269,7 @@ for model_idx, (
         x = int(x)
         y = int(y)
 
-        patch = wsi_img[
-            y:y+PATCH_SIZE,
-            x:x+PATCH_SIZE
-        ]
+        patch = wsi_img[y:y + PATCH_SIZE, x:x + PATCH_SIZE]
 
         return patch
 
@@ -370,37 +277,17 @@ for model_idx, (
     # RANDOM TUMOR QUERIES
     # --------------------------------------------------------
 
-    query_indices = np.random.choice(
-
-        tumor_indices,
-
-        min(
-            NUM_QUERIES,
-            len(tumor_indices)
-        ),
-
-        replace=False
-
-    )
+    query_indices = np.random.choice(tumor_indices, min(NUM_QUERIES, len(tumor_indices)), replace=False)
 
     # --------------------------------------------------------
     # INITIALIZE METHODS
     # --------------------------------------------------------
 
     methods = {
-
-        "BruteForce":
-        BruteForce(features),
-
-        "FAISSFlat":
-        FAISSFlat(features),
-
-        "FAISSIVF":
-        FAISSIVF(features),
-
-        "FAISSHNSW":
-        FAISSHNSW(features)
-
+        "BruteForce": BruteForce(features),
+        "FAISSFlat": FAISSFlat(features),
+        "FAISSIVF": FAISSIVF(features),
+        "FAISSHNSW": FAISSHNSW(features)
     }
 
     all_results[model_name] = {}
@@ -409,12 +296,7 @@ for model_idx, (
     # TEST RETRIEVAL METHODS
     # --------------------------------------------------------
 
-    for method_idx, (
-
-        method_name,
-        method
-
-    ) in enumerate(methods.items()):
+    for method_idx, (method_name, method) in enumerate(methods.items()):
 
         print(f"\nRunning {method_name}")
 
@@ -433,47 +315,21 @@ for model_idx, (
 
             start = time.time()
 
-            retrieved_indices = method.search(
+            retrieved_indices = method.search(query_embedding, TOP_K + 1)
 
-                query_embedding,
-                TOP_K + 1
+            latency = (time.time() - start) * 1000
 
-            )
-
-            latency = (
-                time.time() - start
-            ) * 1000
-
-            retrieved_indices = retrieved_indices[
-                retrieved_indices != query_idx
-            ][:TOP_K]
+            retrieved_indices = retrieved_indices[retrieved_indices != query_idx][:TOP_K]
 
             # ------------------------------------------------
             # METRICS
             # ------------------------------------------------
 
-            p5 = precision_at_k(
+            p5 = precision_at_k(retrieved_indices, labels, 5)
 
-                retrieved_indices,
-                labels,
-                5
+            p10 = precision_at_k(retrieved_indices, labels, 10)
 
-            )
-
-            p10 = precision_at_k(
-
-                retrieved_indices,
-                labels,
-                10
-
-            )
-
-            ap = average_precision(
-
-                retrieved_indices,
-                labels
-
-            )
+            ap = average_precision(retrieved_indices, labels)
 
             p5_scores.append(p5)
             p10_scores.append(p10)
@@ -486,19 +342,13 @@ for model_idx, (
 
             if q_num == 0:
 
-                fig, axes = plt.subplots(
-                    4,
-                    4,
-                    figsize=(12, 12)
-                )
+                fig, axes = plt.subplots(4, 4, figsize=(12, 12))
 
                 axes = axes.flatten()
 
                 # QUERY PATCH
 
-                axes[0].imshow(
-                    get_patch(query_idx)
-                )
+                axes[0].imshow(get_patch(query_idx))
 
                 axes[0].set_title("QUERY")
 
@@ -508,52 +358,22 @@ for model_idx, (
 
                 for i, idx in enumerate(retrieved_indices):
 
-                    axes[i + 1].imshow(
-                        get_patch(idx)
-                    )
+                    axes[i + 1].imshow(get_patch(idx))
 
-                    label = (
-                        "Tumor"
-                        if labels[idx] == 1
-                        else "BG"
-                    )
+                    label = "Tumor" if labels[idx] == 1 else "BG"
 
                     axes[i + 1].set_title(label)
 
                     axes[i + 1].axis("off")
 
-                for j in range(
-                    len(retrieved_indices) + 1,
-                    16
-                ):
-
+                for j in range(len(retrieved_indices) + 1, 16):
                     axes[j].axis("off")
 
-                plt.suptitle(
-
-                    f"{model_name} + {method_name}\n"
-                    f"P@5={p5:.2f} | "
-                    f"P@10={p10:.2f} | "
-                    f"mAP={ap:.2f} | "
-                    f"Latency={latency:.2f}ms"
-
-                )
+                plt.suptitle(f"{model_name} + {method_name}\nP@5={p5:.2f} | P@10={p10:.2f} | mAP={ap:.2f} | Latency={latency:.2f}ms")
 
                 plt.tight_layout()
 
-                plt.savefig(
-
-                    os.path.join(
-
-                        RESULTS_DIR,
-
-                        f"{model_name}_{method_name}_retrieval.png"
-
-                    ),
-
-                    dpi=300
-
-                )
+                plt.savefig(os.path.join(RESULTS_DIR, f"{model_name}_{method_name}_retrieval.png"), dpi=300)
 
                 plt.close()
 
@@ -572,18 +392,13 @@ for model_idx, (
         print(f"Latency : {avg_latency:.4f}")
 
         all_results[model_name][method_name] = {
-
             "P@5": avg_p5,
             "P@10": avg_p10,
             "mAP": avg_map,
             "latency": avg_latency
-
         }
 
-        heatmap_matrix[
-            model_idx,
-            method_idx
-        ] = avg_map
+        heatmap_matrix[model_idx, method_idx] = avg_map
 
 # ============================================================
 # BARPLOT : BEST mAP PER MODEL
@@ -594,60 +409,28 @@ model_names = []
 
 for model_name in FEATURE_PATHS.keys():
 
-    maps = [
-
-        all_results[model_name][method]["mAP"]
-
-        for method in RETRIEVAL_METHODS
-
-    ]
+    maps = [all_results[model_name][method]["mAP"] for method in RETRIEVAL_METHODS]
 
     best_maps.append(max(maps))
 
     model_names.append(model_name)
 
-plt.figure(figsize=(8,5))
+plt.figure(figsize=(8, 5))
 
-plt.bar(
-
-    model_names,
-    best_maps
-
-)
+plt.bar(model_names, best_maps)
 
 for i, v in enumerate(best_maps):
-
-    plt.text(
-
-        i,
-        v,
-        f"{v:.3f}",
-        ha="center"
-
-    )
+    plt.text(i, v, f"{v:.3f}", ha="center")
 
 plt.ylabel("Best mAP")
 
 plt.xlabel("Foundation Model")
 
-plt.title(
-    "Foundation Model Comparison"
-)
+plt.title("Foundation Model Comparison")
 
 plt.tight_layout()
 
-plt.savefig(
-
-    os.path.join(
-
-        RESULTS_DIR,
-        "foundation_model_map_comparison.png"
-
-    ),
-
-    dpi=300
-
-)
+plt.savefig(os.path.join(RESULTS_DIR, "foundation_model_map_comparison.png"), dpi=300)
 
 plt.close()
 
@@ -655,44 +438,21 @@ plt.close()
 # HEATMAP
 # ============================================================
 
-plt.figure(figsize=(10,6))
+plt.figure(figsize=(10, 6))
 
-im = plt.imshow(
-    heatmap_matrix,
-    aspect='auto'
-)
+im = plt.imshow(heatmap_matrix, aspect='auto')
 
 plt.colorbar(im)
 
-plt.xticks(
+plt.xticks(np.arange(len(RETRIEVAL_METHODS)), RETRIEVAL_METHODS)
 
-    np.arange(len(RETRIEVAL_METHODS)),
-    RETRIEVAL_METHODS
-
-)
-
-plt.yticks(
-
-    np.arange(len(model_names)),
-    model_names
-
-)
+plt.yticks(np.arange(len(model_names)), model_names)
 
 for i in range(len(model_names)):
 
     for j in range(len(RETRIEVAL_METHODS)):
 
-        plt.text(
-
-            j,
-            i,
-            f"{heatmap_matrix[i,j]:.3f}",
-
-            ha="center",
-            va="center",
-            color="white"
-
-        )
+        plt.text(j, i, f"{heatmap_matrix[i,j]:.3f}", ha="center", va="center", color="white")
 
 plt.xlabel("Retrieval Algorithm")
 
@@ -702,18 +462,7 @@ plt.title("mAP Heatmap")
 
 plt.tight_layout()
 
-plt.savefig(
-
-    os.path.join(
-
-        RESULTS_DIR,
-        "model_vs_retrieval_heatmap.png"
-
-    ),
-
-    dpi=300
-
-)
+plt.savefig(os.path.join(RESULTS_DIR, "model_vs_retrieval_heatmap.png"), dpi=300)
 
 plt.close()
 
@@ -721,12 +470,7 @@ plt.close()
 # SAVE SUMMARY
 # ============================================================
 
-summary_path = os.path.join(
-
-    RESULTS_DIR,
-    "foundation_model_summary.txt"
-
-)
+summary_path = os.path.join(RESULTS_DIR, "foundation_model_summary.txt")
 
 with open(summary_path, "w") as f:
 
@@ -743,7 +487,6 @@ with open(summary_path, "w") as f:
             f.write(f"\n{method_name}\n")
 
             for k, v in metrics.items():
-
                 f.write(f"{k}: {v:.4f}\n")
 
 # ============================================================
