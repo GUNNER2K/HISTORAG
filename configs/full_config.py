@@ -4,6 +4,17 @@ from pathlib import Path
 # ROOT DIRECTORIES
 # ============================================================
 
+# ============================================================
+# WSI ROOT
+# ============================================================
+
+WSI_ROOT = Path(
+
+    "/home/woody/iwi5/iwi5411h/BIMAP/data/"
+    "WSI_PrimaryTumor_Hypopharynx/"
+
+)
+
 H5_ROOT = Path(
 
     "/home/woody/iwi5/iwi5411h/BIMAP/data/patches_PT_484/pre_uni/WSI_PrimaryTumor/WSI_PrimaryTumor_Hypopharynx/h5_files/"
@@ -35,7 +46,7 @@ PATCH_SIZE = 256
 
 TOP_K = 15
 
-NUM_QUERIES = 50
+NUM_QUERIES = 20
 
 RANDOM_SEED = 42
 
