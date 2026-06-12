@@ -3,6 +3,14 @@ from pathlib import Path
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
 
+WSI_SMALL_PATH = (
+
+    ROOT_DIR
+    / "demo_data"
+    / "small_sample_wsi.jpg"
+
+)
+
 
 FEATURE_PATHS = {
 
@@ -29,15 +37,6 @@ GEOJSON_PATH = (
 
 )
 
-
-WSI_IMAGE_PATH = (
-
-    ROOT_DIR
-    / "demo_data"
-    / "small_sample_wsi.jpg"
-
-)
-
 RESULTS_DIR = (
 
     ROOT_DIR
@@ -50,7 +49,7 @@ PATCH_SIZE = 256
 
 TOP_K = 15
 
-NUM_QUERIES = 20
+NUM_QUERIES = 5
 
 RANDOM_SEED = 42
 

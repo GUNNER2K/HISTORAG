@@ -15,11 +15,24 @@ from shapely.geometry import Point
 from shapely.geometry import shape
 from shapely.ops import unary_union
 
-# ============================================================
-# CONFIG SELECTION
-# ============================================================
+import argparse
 
-USE_DEMO = False
+
+parser = argparse.ArgumentParser()
+
+parser.add_argument(
+
+    "--demo",
+
+    action="store_true",
+
+    help="Run in demo mode"
+
+)
+
+args = parser.parse_args()
+
+USE_DEMO = args.demo
 
 if USE_DEMO:
 
@@ -135,7 +148,7 @@ if USE_DEMO:
     # --------------------------------------------------------
 
     coords, features = load_h5(
-        H5_PATH
+        FEATURE_PATHS['UNI']
     )
 
     # --------------------------------------------------------
@@ -170,7 +183,7 @@ if USE_DEMO:
     # --------------------------------------------------------
 
     demo_img = Image.open(
-        WSI_PATH
+        WSI_SMALL_PATH
     ).convert("RGB")
 
     demo_img = np.array(
@@ -179,7 +192,7 @@ if USE_DEMO:
 
     slide_objects[0] = demo_img
 
-    slide_paths[0] = WSI_PATH
+    slide_paths[0] = WSI_SMALL_PATH
 
 # ============================================================
 # FULL MODE

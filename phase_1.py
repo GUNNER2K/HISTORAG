@@ -12,7 +12,25 @@ from pathlib import Path
 # CONFIG SELECTION
 # ============================================================
 
-USE_DEMO = False
+import argparse
+
+
+parser = argparse.ArgumentParser()
+
+parser.add_argument(
+
+    "--demo",
+
+    action="store_true",
+
+    help="Run in demo mode"
+
+)
+
+args = parser.parse_args()
+
+USE_DEMO = args.demo
+
 
 if USE_DEMO:
 
@@ -57,13 +75,13 @@ def load_h5(path):
 # DEMO MODE
 # ============================================================
 
-if not USE_DEMO == False:
+if USE_DEMO:
 
     print("\n================================================")
     print("RUNNING DEMO MODE")
     print("================================================")
 
-    features, coords = load_h5(H5_PATH)
+    features, coords = load_h5(FEATURE_PATHS['UNI'])
 
 # ============================================================
 # FULL MODE
