@@ -138,7 +138,8 @@ This MVP serves as the foundation for all subsequent experiments.
 ## Hypothesis 1: Better Retrieval Methods Improve Similarity Search
 
 Approximate Nearest Neighbor (ANN) retrieval methods such as FAISS-HNSW can significantly reduce retrieval latency compared to brute-force similarity search while maintaining retrieval quality.
-
+Code: [`phase_1.py`](phase_1.py).
+Output: [`results/h1`](results/h1).
 ### Experiments
 
 * Brute-force retrieval
@@ -226,97 +227,121 @@ This is the primary metric used to compare retrieval quality.
 
 ---
 
+
 ## Installation
 
 ### Clone Repository
-IMPORTANT: YOU WILL REQUIRE TO USE TRIDENT FOR FEATURE EXTRACTION AND SEGMENTATION.
-
-Create an environment (Python 3.10 or 3.11): conda create -n "trident" python=3.10, and activate it conda activate trident.
-Cloning:
-```bash
-git clone https://github.com/mahmoodlab/trident.git && cd trident.
-```
-Local installation: 
-```bash
-pip install -e ..
-```
-
-## Running Feature Extraction
-
-Example:
 
 ```bash
-python run_batch_of_slides.py \
-    --task all \
-    --wsi_dir /path/to/wsi.svs \
-    --job_dir /path/to/output \
-    --patch_encoder uni_v1
-```
+git clone https://github.com/GUNNER2K/HISTORAG.git
+cd HISTORAG
+````
 
-For other models:
+---
 
-```bash
---patch_encoder virchow
-```
+### Create Conda Environment
 
 ```bash
---patch_encoder conch_v15
+conda create -n historag python=3.10 -y
+conda activate historag
 ```
 
 ---
 
-## Running Retrieval Experiments
-
-Example:
+### Install Dependencies
 
 ```bash
-python retrieval_experiment.py
+pip install -r requirements.txt
 ```
 
-Outputs:
+---
 
-* Retrieval visualizations
-* Retrieval metrics
-* Latency statistics
-* Evaluation reports
+### Install OpenSlide System Libraries
+
+#### Ubuntu / Debian
+
+```bash
+sudo apt-get update
+sudo apt-get install openslide-tools libopenslide-dev
+```
+
+#### Conda Alternative
+
+```bash
+conda install -c conda-forge openslide
+```
 
 ---
 
-## Reproducing Experiments
+### Verify Installation
 
-1. Download dataset
-2. Extract image patches
-3. Generate embeddings
-4. Build retrieval index
-5. Run retrieval evaluation
-6. Compute metrics
-7. Generate plots
+```bash
+python -c "import openslide; print('OpenSlide installed successfully')"
+```
 
 ---
 
-## Hardware
+### Repository Structure
 
-Experiments were conducted using:
-
-* NVIDIA A100 GPUs
-* NVIDIA V100 GPUs
-* TinyGPU Cluster
-* Woody Storage Cluster
+```text
+HISTORAG/
+│
+├── demo_data/                 # Lightweight reproducible demo dataset
+├── results/                   # Generated experiment outputs
+├── phase_1_h1.py              # Hypothesis 1: Retrieval latency comparison
+├── phase_1_h2.py              # Hypothesis 2: Annotation-aware retrieval evaluation
+├── phase_1_h3.py              # Hypothesis 3: Foundation model comparison
+├── phase_1_h4.py              # Hypothesis 4: Embedding-space visualization
+├── alignment_verification.py  # Coordinate alignment verification
+├── requirements.txt
+└── README.md
+```
 
 ---
 
-## Future Work
+### Run Example Experiments
 
-Potential future improvements include:
+#### Hypothesis 1 — Retrieval Latency Comparison
 
-* Cross-slide retrieval
-* Multi-slide retrieval benchmarking
-* Vector database integration
-* Interactive pathology atlas
-* Multi-modal retrieval
-* Retrieval-augmented pathology foundation models
-* Clinical decision support applications
+```bash
+python phase_1_h1.py
+```
 
+---
+
+#### Hypothesis 2 — Annotation-Aware Retrieval Evaluation
+
+```bash
+python phase_1_h2.py
+```
+
+---
+
+#### Hypothesis 3 — Foundation Model Comparison
+
+```bash
+python phase_1_h3.py
+```
+
+---
+
+#### Hypothesis 4 — Embedding Space Visualization
+
+```bash
+python phase_1_h4.py
+```
+
+---
+
+### Output Directory
+
+All generated figures, plots, retrieval visualizations, and embedding-space analyses are stored inside:
+
+```text
+results/
+```
+
+```
 ---
 
 ## Author
