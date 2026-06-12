@@ -1,164 +1,289 @@
 import os
 import time
 import h5py
+import random
 import numpy as np
-import openslide
 import matplotlib.pyplot as plt
 
+from PIL import Image
+from pathlib import Path
 
-tumor_feat_path = "/home/woody/iwi5/iwi5411h/BIMAP/patches_tumor/20x_256px_0px_overlap/features_uni_v1/TumorCenter_CD3_block1.h5"
-inv_feat_path   = "/home/woody/iwi5/iwi5411h/BIMAP/patches/20x_256px_0px_overlap/features_uni_v1/InvasionFront_CD3_block1.h5"
+# ============================================================
+# REPRODUCIBILITY
+# ============================================================
 
-tumor_wsi_path = "/home/woody/iwi5/iwi5411h/BIMAP/data/TumorCenter_CD3_block1.svs"
-inv_wsi_path   = "/home/woody/iwi5/iwi5411h/BIMAP/data/InvasionFront_CD3_block1.svs"
+random.seed(42)
+np.random.seed(42)
 
-RESULTS_DIR = "/home/woody/iwi5/iwi5411h/BIMAP/results"
-os.makedirs(RESULTS_DIR, exist_ok=True)
+# ============================================================
+# PATHS
+# ============================================================
+
+ROOT_DIR = Path(
+    "/home/hpc/iwi5/iwi5411h/bimap"
+)
+
+H5_PATH = (
+    ROOT_DIR
+    / "demo_data"
+    / "sample_uni.h5"
+)
+
+WSI_PATH = (
+    ROOT_DIR
+    / "demo_data"
+    / "small_sample_wsi.jpg"
+)
+
+RESULTS_DIR = (
+    ROOT_DIR
+    / "results"
+    / "mvp"
+)
+
+os.makedirs(
+    RESULTS_DIR,
+    exist_ok=True
+)
 
 PATCH_SIZE = 256
-LEVEL = 0
+TOP_K = 10
+NUM_QUERIES = 5
 
-# -----------------------------
-# LOAD H5 FILES
-# -----------------------------
-def load_h5(path, name):
-    print(f"\n[INFO] Loading {name} features from: {path}")
+# ============================================================
+# LOAD H5
+# ============================================================
+
+def load_h5(path):
+
+    print(f"\nLoading features from: {path}")
+
     with h5py.File(path, 'r') as f:
+
         features = f['features'][:]
         coords = f['coords'][:]
-    
-    print(f"[INFO] {name} features shape: {features.shape}")
-    print(f"[INFO] {name} coords shape:   {coords.shape}")
-    
+
+    print(
+        "Features shape:",
+        features.shape
+    )
+
+    print(
+        "Coords shape:",
+        coords.shape
+    )
+
     return features, coords
+
+# ============================================================
+# START TIMER
+# ============================================================
 
 start_time = time.time()
 
-X_T, C_T = load_h5(tumor_feat_path, "TumorCenter")
-X_I, C_I = load_h5(inv_feat_path, "InvasionFront")
+# ============================================================
+# LOAD FEATURES
+# ============================================================
 
-# -----------------------------
-# CONCATENATE
-# -----------------------------
-print("\n Concatenating datasets...")
+X, coords = load_h5(H5_PATH)
 
-X = np.vstack([X_T, X_I])
-coords = np.vstack([C_T, C_I])
-
-slide_ids = np.concatenate([
-    np.zeros(len(X_T)),   # 0 = tumor
-    np.ones(len(X_I))     # 1 = invasion
-])
-
-print(f"Total patches: {len(X)}")
-print(f"Feature dimension: {X.shape[1]}")
-
-# -----------------------------
+# ============================================================
 # NORMALIZATION
-# -----------------------------
-print("\n[INFO] Normalizing feature vectors...")
-X = X / np.linalg.norm(X, axis=1, keepdims=True)
+# ============================================================
 
-# -----------------------------
-# LOAD SLIDES
-# -----------------------------
-print("\n Loading WSI slides...")
-slide_T = openslide.OpenSlide(tumor_wsi_path)
-slide_I = openslide.OpenSlide(inv_wsi_path)
-print(" Slides loaded successfully")
+print("\nNormalizing features...")
 
-# -----------------------------
+X = X.astype(np.float32)
+
+X = X / np.linalg.norm(
+    X,
+    axis=1,
+    keepdims=True
+)
+
+# ============================================================
+# LOAD DEMO WSI PNG
+# ============================================================
+
+print("\nLoading sample_wsi.png...")
+
+wsi_img = Image.open(
+    WSI_PATH
+).convert("RGB")
+
+wsi_img = np.array(wsi_img)
+
+print(
+    "Demo image shape:",
+    wsi_img.shape
+)
+
+# ============================================================
 # PATCH EXTRACTION
-# -----------------------------
+# ============================================================
+
 def get_patch(idx):
+
     x, y = coords[idx]
-    slide = slide_T if slide_ids[idx] == 0 else slide_I
-    
-    patch = slide.read_region(
-        (int(x), int(y)),
-        LEVEL,
-        (PATCH_SIZE, PATCH_SIZE)
-    ).convert("RGB")
-    
+
+    x = int(x)
+    y = int(y)
+
+    patch = wsi_img[
+        y:y+PATCH_SIZE,
+        x:x+PATCH_SIZE
+    ]
+
     return patch
 
-# -----------------------------
-# RETRIEVAL
-# -----------------------------
+# ============================================================
+# BRUTE FORCE RETRIEVAL
+# ============================================================
+
 def retrieve(query_idx, top_k=10):
-    print(f"\n Running retrieval for query index: {query_idx}")
-    
+
+    print(
+        f"\nRunning retrieval "
+        f"for query index: {query_idx}"
+    )
+
     q = X[query_idx]
-    
+
     sims = X @ q
-    indices = np.argsort(-sims)[:top_k]
-    
-    print(f"Top-{top_k} similarity scores: {sims[indices]}")
-    
-    return indices, sims[indices]
 
-# -----------------------------
-# EVALUATION
-# -----------------------------
-def evaluate(query_idx, retrieved_indices):
-    query_slide = slide_ids[query_idx]
-    
-    same = sum(slide_ids[i] == query_slide for i in retrieved_indices)
-    percent = (same / len(retrieved_indices)) * 100
-    
-    print("\n Evaluation Results:")
-    print(f"Same-slide patches: {same}/{len(retrieved_indices)}")
-    print(f"Percentage same region: {percent:.2f}%")
-    
-    return same, percent
+    indices = np.argsort(
+        -sims
+    )[:top_k + 1]
 
-# -----------------------------
-# VISUALIZATION (SAVE)
-# -----------------------------
-def visualize(query_idx, retrieved_indices, save_path):
-    print(f"\n[INFO] Saving visualization to: {save_path}")
-    
-    plt.figure(figsize=(14, 5))
-    
-    # Query
-    plt.subplot(1, len(retrieved_indices)+1, 1)
-    plt.imshow(get_patch(query_idx))
-    plt.title("Query")
-    plt.axis("off")
-    
-    # Retrieved
+    # remove query itself
+
+    indices = indices[
+        indices != query_idx
+    ][:top_k]
+
+    print(
+        "Retrieved indices:",
+        indices
+    )
+
+    return indices
+
+# ============================================================
+# VISUALIZATION
+# ============================================================
+
+def visualize(
+
+    query_idx,
+    retrieved_indices,
+    save_path
+
+):
+
+    print(
+        f"\nSaving visualization to:"
+        f"\n{save_path}"
+    )
+
+    fig, axes = plt.subplots(
+
+        1,
+        TOP_K + 1,
+
+        figsize=(20, 4)
+
+    )
+
+    # --------------------------------------------------------
+    # QUERY
+    # --------------------------------------------------------
+
+    axes[0].imshow(
+        get_patch(query_idx)
+    )
+
+    axes[0].set_title("QUERY")
+
+    axes[0].axis("off")
+
+    # --------------------------------------------------------
+    # RETRIEVED PATCHES
+    # --------------------------------------------------------
+
     for i, idx in enumerate(retrieved_indices):
-        plt.subplot(2, len(retrieved_indices)+1, i+2)
-        plt.imshow(get_patch(idx))
-        
-        label = "Tumor" if slide_ids[idx] == 0 else "Invasion"
-        plt.title(label)
-        plt.axis("off")
-    
+
+        axes[i + 1].imshow(
+            get_patch(idx)
+        )
+
+        axes[i + 1].set_title(
+            f"Top-{i+1}"
+        )
+
+        axes[i + 1].axis("off")
+
     plt.tight_layout()
-    plt.savefig(save_path)
+
+    plt.savefig(
+        save_path,
+        dpi=300
+    )
+
     plt.close()
 
+# ============================================================
+# RETRIEVAL EXPERIMENTS
+# ============================================================
 
-NUM_QUERIES = 5
-
-print("\n Starting retrieval experiments...\n")
+print("\nStarting MVP retrieval...\n")
 
 for i in range(NUM_QUERIES):
-    print(f"\n================ QUERY {i+1} ================")
-    
-    query_idx = np.random.randint(0, len(X))
-    
-    retrieved_indices, scores = retrieve(query_idx, top_k=10)
-    
-    same_count, percent = evaluate(query_idx, retrieved_indices)
-    
-    save_path = os.path.join(RESULTS_DIR, f"query_{i+1}.png")
-    visualize(query_idx, retrieved_indices, save_path)
 
+    print(
+        f"\n================ "
+        f"QUERY {i+1} "
+        f"================"
+    )
+
+    query_idx = np.random.randint(
+        0,
+        len(X)
+    )
+
+    retrieved_indices = retrieve(
+        query_idx,
+        top_k=TOP_K
+    )
+
+    save_path = os.path.join(
+
+        RESULTS_DIR,
+        f"query_{i+1}.png"
+
+    )
+
+    visualize(
+
+        query_idx,
+        retrieved_indices,
+        save_path
+
+    )
+
+# ============================================================
+# FINISH
+# ============================================================
 
 end_time = time.time()
 
-print("\n[INFO] Finished all queries.")
-print(f"[INFO] Total runtime: {end_time - start_time:.2f} seconds")
-print(f"[INFO] Results saved in: {RESULTS_DIR}")
+print("\nFinished all queries.")
+
+print(
+    f"Total runtime: "
+    f"{end_time - start_time:.2f} seconds"
+)
+
+print(
+    f"Results saved in:\n"
+    f"{RESULTS_DIR}"
+)
