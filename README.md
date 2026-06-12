@@ -156,8 +156,8 @@ CONCH demonstrated competitive retrieval performance while maintaining a signifi
 
 ## MVP Implementation 
 
-Code: [`mvp.py`](mvp.py).
-Output: [`results/mvp`](results/mvp).
+* Code: [`mvp.py`](mvp.py).
+* Output: [`results/mvp`](results/mvp).
 
 The initial MVP consists of:
 
@@ -177,8 +177,8 @@ This MVP serves as the foundation for all subsequent experiments.
 
 Approximate Nearest Neighbor (ANN) retrieval methods such as FAISS-HNSW can significantly reduce retrieval latency compared to brute-force similarity search while maintaining retrieval quality.
 
-Code: [`phase_1.py`](phase_1.py).
-Output: [`results/h1`](results/h1).
+* Code: [`phase_1.py`](phase_1.py).
+* Output: [`results/h1`](results/h1).
 
 ### Experiments
 
@@ -195,8 +195,8 @@ Output: [`results/h1`](results/h1).
 
 ## Hypothesis 2: Retrieval Quality Can Be Quantitatively Measured
 
-Code: [`phase_1_h2.py`](phase_1_h2.py).
-Output: [`results/h2`](results/h2).
+* Code: [`phase_1_h2.py`](phase_1_h2.py).
+* Output: [`results/h2`](results/h2).
 
 The quality of histopathology patch retrieval can be objectively evaluated using quantitative retrieval metrics.
 
@@ -219,8 +219,8 @@ The quality of histopathology patch retrieval can be objectively evaluated using
 
 Different pathology foundation models may produce embeddings with varying retrieval performance and representation quality.
 
-Code: [`phase_1_h3.py`](phase_1_h3.py) and [`embeddings_2D_3D`](embeddings_2D_3D)
-Output: [`results/h4`](results/h4).
+* Code: [`phase_1_h3.py`](phase_1_h3.py) and [`embeddings_2D_3D`](embeddings_2D_3D)
+* Output: [`results/h3`](results/h3) and [`results/h4`](results/h4)
 
 ### Experiments
 
