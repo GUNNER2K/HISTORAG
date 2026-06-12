@@ -1,3 +1,4 @@
+
 import os
 import json
 import time
@@ -5,30 +6,61 @@ import h5py
 import faiss
 import random
 import numpy as np
-import openslide
 import matplotlib.pyplot as plt
+
+from PIL import Image
+from pathlib import Path
 
 from shapely.geometry import Point
 from shapely.geometry import shape
 from shapely.ops import unary_union
 
 # ============================================================
+# REPRODUCIBILITY
+# ============================================================
+
+random.seed(42)
+np.random.seed(42)
+
+# ============================================================
 # PATHS
 # ============================================================
 
-H5_PATH = "/home/hpc/iwi5/iwi5411h/bimap/demo_data/sample_uni.h5"
+ROOT_DIR = Path(__file__).resolve().parent
 
-WSI_PATH = "/home/woody/iwi5/iwi5411h/BIMAP/data/WSI_PrimaryTumor_CUP/PrimaryTumor_HE_484.svs"
+H5_PATH = (
+    ROOT_DIR
+    / "demo_data"
+    / "sample_uni.h5"
+)
 
-GEOJSON_PATH = "/home/hpc/iwi5/iwi5411h/bimap/demo_data/sample_annotations.geojson"
+WSI_PATH = (
+    ROOT_DIR
+    / "demo_data"
+    / "small_sample_wsi.jpg"
+)
 
-RESULTS_DIR = "/home/hpc/iwi5/iwi5411h/bimap/results/comparison/uni"
+GEOJSON_PATH = (
+    ROOT_DIR
+    / "demo_data"
+    / "sample_annotations.geojson"
+)
 
-os.makedirs(RESULTS_DIR, exist_ok=True)
+RESULTS_DIR = (
+    ROOT_DIR
+    / "results"
+    / "comparison"
+    / "uni"
+)
+
+os.makedirs(
+    RESULTS_DIR,
+    exist_ok=True
+)
 
 PATCH_SIZE = 256
 TOP_K = 15
-NUM_QUERIES = 30
+NUM_QUERIES = 10
 
 # ============================================================
 # LOAD FEATURES
@@ -63,18 +95,36 @@ features = features / np.linalg.norm(
 print("\nLoading GeoJSON...")
 
 with open(GEOJSON_PATH, "r") as f:
+
     geo = json.load(f)
 
 polygons = []
 
 for feature in geo["features"]:
 
-    geom = shape(feature["geometry"])
+    geom = shape(
+        feature["geometry"]
+    )
+
     polygons.append(geom)
 
 tumor_region = unary_union(polygons)
 
 print("Tumor polygons loaded")
+
+# ============================================================
+# LOAD DEMO IMAGE
+# ============================================================
+
+print("\nLoading demo WSI PNG...")
+
+wsi_img = Image.open(
+    WSI_PATH
+).convert("RGB")
+
+wsi_img = np.array(wsi_img)
+
+print("Demo image shape:", wsi_img.shape)
 
 # ============================================================
 # LABEL PATCHES
@@ -89,7 +139,10 @@ for x, y in coords:
     center_x = x + PATCH_SIZE / 2
     center_y = y + PATCH_SIZE / 2
 
-    pt = Point(center_x, center_y)
+    pt = Point(
+        center_x,
+        center_y
+    )
 
     inside = tumor_region.contains(pt)
 
@@ -97,27 +150,36 @@ for x, y in coords:
 
 labels = np.array(labels)
 
-tumor_indices = np.where(labels == 1)[0]
+tumor_indices = np.where(
+    labels == 1
+)[0]
 
+print("Total patches:", len(labels))
 print("Tumor patches:", len(tumor_indices))
+print("Background patches:", np.sum(labels == 0))
+
+if len(tumor_indices) == 0:
+
+    raise ValueError(
+        "No tumor patches found. "
+        "Check coordinate alignment."
+    )
 
 # ============================================================
-# LOAD WSI
+# QUERY SELECTION
 # ============================================================
-
-slide = openslide.OpenSlide(WSI_PATH)
-
-# ============================================================
-# FIX RANDOMNESS
-# ============================================================
-
-random.seed(42)
-np.random.seed(42)
 
 query_indices = np.random.choice(
+
     tumor_indices,
-    min(NUM_QUERIES, len(tumor_indices)),
+
+    min(
+        NUM_QUERIES,
+        len(tumor_indices)
+    ),
+
     replace=False
+
 )
 
 print(f"\nUsing {len(query_indices)} tumor queries")
@@ -130,11 +192,13 @@ def get_patch(idx):
 
     x, y = coords[idx]
 
-    patch = slide.read_region(
-        (int(x), int(y)),
-        0,
-        (PATCH_SIZE, PATCH_SIZE)
-    ).convert("RGB")
+    x = int(x)
+    y = int(y)
+
+    patch = wsi_img[
+        y:y+PATCH_SIZE,
+        x:x+PATCH_SIZE
+    ]
 
     return patch
 
@@ -142,22 +206,34 @@ def get_patch(idx):
 # METRICS
 # ============================================================
 
-def precision_at_k(retrieved_indices, labels, k):
+def precision_at_k(
+    retrieved_indices,
+    labels,
+    k
+):
 
     retrieved = retrieved_indices[:k]
 
-    relevant = np.sum(labels[retrieved] == 1)
+    relevant = np.sum(
+        labels[retrieved] == 1
+    )
 
     return relevant / k
 
 
-def average_precision(retrieved_indices, labels):
+def average_precision(
+    retrieved_indices,
+    labels
+):
 
     precisions = []
 
     relevant_count = 0
 
-    for rank, idx in enumerate(retrieved_indices, start=1):
+    for rank, idx in enumerate(
+        retrieved_indices,
+        start=1
+    ):
 
         if labels[idx] == 1:
 
@@ -168,6 +244,7 @@ def average_precision(retrieved_indices, labels):
             )
 
     if len(precisions) == 0:
+
         return 0
 
     return np.mean(precisions)
@@ -179,6 +256,7 @@ def average_precision(retrieved_indices, labels):
 class BruteForce:
 
     def __init__(self, X):
+
         self.X = X
 
     def search(self, q, k):
@@ -215,22 +293,24 @@ class FAISSIVF:
 
         d = X.shape[1]
 
-        nlist = 100
+        nlist = 10
 
         quantizer = faiss.IndexFlatIP(d)
 
         self.index = faiss.IndexIVFFlat(
+
             quantizer,
             d,
             nlist,
             faiss.METRIC_INNER_PRODUCT
+
         )
 
         self.index.train(X)
 
         self.index.add(X)
 
-        self.index.nprobe = 10
+        self.index.nprobe = 5
 
     def search(self, q, k):
 
@@ -247,7 +327,10 @@ class FAISSHNSW:
 
         d = X.shape[1]
 
-        self.index = faiss.IndexHNSWFlat(d, 32)
+        self.index = faiss.IndexHNSWFlat(
+            d,
+            32
+        )
 
         self.index.hnsw.efConstruction = 40
 
@@ -267,13 +350,17 @@ class FAISSHNSW:
 
 methods = {
 
-    "BruteForce": BruteForce(features),
+    "BruteForce":
+    BruteForce(features),
 
-    "FAISSFlat": FAISSFlat(features),
+    "FAISSFlat":
+    FAISSFlat(features),
 
-    "FAISSIVF": FAISSIVF(features),
+    "FAISSIVF":
+    FAISSIVF(features),
 
-    "FAISSHNSW": FAISSHNSW(features)
+    "FAISSHNSW":
+    FAISSHNSW(features)
 
 }
 
@@ -293,7 +380,7 @@ for name, method in methods.items():
     latency_scores = []
 
     # --------------------------------------------------------
-    # MULTIPLE QUERY EVALUATION
+    # MULTI QUERY EVALUATION
     # --------------------------------------------------------
 
     for query_idx in query_indices:
@@ -307,7 +394,9 @@ for name, method in methods.items():
             TOP_K + 1
         )
 
-        latency = (time.time() - start) * 1000
+        latency = (
+            time.time() - start
+        ) * 1000
 
         retrieved_indices = retrieved_indices[
             retrieved_indices != query_idx
@@ -354,7 +443,7 @@ for name, method in methods.items():
     }
 
     # --------------------------------------------------------
-    # VISUALIZATION USING SAME QUERY
+    # VISUALIZATION
     # --------------------------------------------------------
 
     fixed_query = query_indices[0]
@@ -391,13 +480,20 @@ for name, method in methods.items():
             get_patch(idx)
         )
 
-        label = "Tumor" if labels[idx] == 1 else "BG"
+        label = (
+            "Tumor"
+            if labels[idx] == 1
+            else "BG"
+        )
 
         axes[i + 1].set_title(label)
 
         axes[i + 1].axis("off")
 
-    for j in range(len(retrieved_indices) + 1, 16):
+    for j in range(
+        len(retrieved_indices) + 1,
+        16
+    ):
 
         axes[j].axis("off")
 
@@ -431,20 +527,27 @@ for name, method in methods.items():
 # ============================================================
 
 sorted_methods = sorted(
+
     results.keys(),
-    key=lambda x: results[x]["latency"],
+
+    key=lambda x:
+    results[x]["latency"],
+
     reverse=True
+
 )
 
 # ============================================================
-# LINE PLOT : mAP
+# mAP LINE PLOT
 # ============================================================
 
 plt.figure(figsize=(8,5))
 
 map_values = [
+
     results[m]["mAP"]
     for m in sorted_methods
+
 ]
 
 plt.plot(
@@ -470,24 +573,29 @@ plt.grid(True)
 plt.tight_layout()
 
 plt.savefig(
+
     os.path.join(
         RESULTS_DIR,
         "mAP_lineplot.png"
     ),
+
     dpi=300
+
 )
 
 plt.close()
 
 # ============================================================
-# LINE PLOT : LATENCY
+# LATENCY LINE PLOT
 # ============================================================
 
 plt.figure(figsize=(8,5))
 
 lat_values = [
+
     results[m]["latency"]
     for m in sorted_methods
+
 ]
 
 plt.plot(
@@ -506,24 +614,30 @@ for i, v in enumerate(lat_values):
 
 plt.ylabel("Latency (ms)")
 plt.xlabel("Retrieval Method")
-plt.title("Latency Comparison (Descending Order)")
+
+plt.title(
+    "Latency Comparison"
+)
 
 plt.grid(True)
 
 plt.tight_layout()
 
 plt.savefig(
+
     os.path.join(
         RESULTS_DIR,
         "latency_lineplot.png"
     ),
+
     dpi=300
+
 )
 
 plt.close()
 
 # ============================================================
-# SAVE RESULTS TXT
+# SAVE SUMMARY
 # ============================================================
 
 summary_path = os.path.join(
@@ -540,6 +654,10 @@ with open(summary_path, "w") as f:
         for k, v in vals.items():
 
             f.write(f"{k}: {v:.4f}\n")
+
+# ============================================================
+# FINAL PRINT
+# ============================================================
 
 print("\n================================================")
 print("FINAL RESULTS")
