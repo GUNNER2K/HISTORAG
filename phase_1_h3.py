@@ -5,41 +5,69 @@ import h5py
 import faiss
 import random
 import numpy as np
-import openslide
 import matplotlib.pyplot as plt
+
+from PIL import Image
+from pathlib import Path
 
 from shapely.geometry import Point
 from shapely.geometry import shape
 from shapely.ops import unary_union
 
 # ============================================================
+# REPRODUCIBILITY
+# ============================================================
+
+random.seed(42)
+np.random.seed(42)
+
+# ============================================================
 # PATHS
 # ============================================================
+
+ROOT_DIR = Path(__file__).resolve().parent
 
 FEATURE_PATHS = {
 
     "CONCH":
-    "/home/hpc/iwi5/iwi5411h/bimap/demo_data/sample_conch.h5",
+    ROOT_DIR / "demo_data" / "sample_conch.h5",
 
     "UNI2":
-    "/home/hpc/iwi5/iwi5411h/bimap/demo_data/sample_uni2.h5",
+    ROOT_DIR / "demo_data" / "sample_uni2.h5",
 
     "VIRCHOW":
-    "/home/hpc/iwi5/iwi5411h/bimap/demo_data/sample_virchow.h5"
+    ROOT_DIR / "demo_data" / "sample_virchow.h5",
+
+    "UNI":
+    ROOT_DIR / "demo_data" / "sample_uni.h5"
 
 }
 
-WSI_PATH = "/home/woody/iwi5/iwi5411h/BIMAP/data/WSI_PrimaryTumor_CUP/PrimaryTumor_HE_484.svs"
+WSI_PATH = (
+    ROOT_DIR
+    / "demo_data"
+    / "small_sample_wsi.jpg"
+)
 
-GEOJSON_PATH = "/home/hpc/iwi5/iwi5411h/bimap/demo_data/sample_annotations.geojson"
+GEOJSON_PATH = (
+    ROOT_DIR
+    / "demo_data"
+    / "sample_annotations.geojson"
+)
 
-RESULTS_DIR = "/home/hpc/iwi5/iwi5411h/bimap/results"
+RESULTS_DIR = (
+    ROOT_DIR
+    / "results"
+)
 
-os.makedirs(RESULTS_DIR, exist_ok=True)
+os.makedirs(
+    RESULTS_DIR,
+    exist_ok=True
+)
 
 PATCH_SIZE = 256
 TOP_K = 15
-NUM_QUERIES = 30
+NUM_QUERIES = 10
 
 # ============================================================
 # LOAD GEOJSON
@@ -48,18 +76,36 @@ NUM_QUERIES = 30
 print("\nLoading GeoJSON...")
 
 with open(GEOJSON_PATH, "r") as f:
+
     geo = json.load(f)
 
 polygons = []
 
 for feature in geo["features"]:
 
-    geom = shape(feature["geometry"])
+    geom = shape(
+        feature["geometry"]
+    )
+
     polygons.append(geom)
 
 tumor_region = unary_union(polygons)
 
 print("Tumor polygons loaded")
+
+# ============================================================
+# LOAD DEMO WSI PNG
+# ============================================================
+
+print("\nLoading demo WSI PNG...")
+
+wsi_img = Image.open(
+    WSI_PATH
+).convert("RGB")
+
+wsi_img = np.array(wsi_img)
+
+print("Demo image shape:", wsi_img.shape)
 
 # ============================================================
 # RETRIEVAL METHODS
@@ -82,7 +128,9 @@ def precision_at_k(retrieved_indices, labels, k):
 
     retrieved = retrieved_indices[:k]
 
-    relevant = np.sum(labels[retrieved] == 1)
+    relevant = np.sum(
+        labels[retrieved] == 1
+    )
 
     return relevant / k
 
@@ -93,7 +141,10 @@ def average_precision(retrieved_indices, labels):
 
     relevant_count = 0
 
-    for rank, idx in enumerate(retrieved_indices, start=1):
+    for rank, idx in enumerate(
+        retrieved_indices,
+        start=1
+    ):
 
         if labels[idx] == 1:
 
@@ -104,6 +155,7 @@ def average_precision(retrieved_indices, labels):
             )
 
     if len(precisions) == 0:
+
         return 0
 
     return np.mean(precisions)
@@ -152,15 +204,17 @@ class FAISSIVF:
 
         d = X.shape[1]
 
-        nlist = 100
+        nlist = 50
 
         quantizer = faiss.IndexFlatIP(d)
 
         self.index = faiss.IndexIVFFlat(
+
             quantizer,
             d,
             nlist,
             faiss.METRIC_INNER_PRODUCT
+
         )
 
         self.index.train(X)
@@ -184,7 +238,10 @@ class FAISSHNSW:
 
         d = X.shape[1]
 
-        self.index = faiss.IndexHNSWFlat(d, 32)
+        self.index = faiss.IndexHNSWFlat(
+            d,
+            32
+        )
 
         self.index.hnsw.efConstruction = 40
 
@@ -205,14 +262,24 @@ class FAISSHNSW:
 all_results = {}
 
 heatmap_matrix = np.zeros(
-    (len(FEATURE_PATHS), len(RETRIEVAL_METHODS))
+
+    (
+        len(FEATURE_PATHS),
+        len(RETRIEVAL_METHODS)
+    )
+
 )
 
 # ============================================================
 # MAIN LOOP
 # ============================================================
 
-for model_idx, (model_name, h5_path) in enumerate(FEATURE_PATHS.items()):
+for model_idx, (
+
+    model_name,
+    h5_path
+
+) in enumerate(FEATURE_PATHS.items()):
 
     print("\n================================================")
     print(f"PROCESSING MODEL: {model_name}")
@@ -225,6 +292,7 @@ for model_idx, (model_name, h5_path) in enumerate(FEATURE_PATHS.items()):
     with h5py.File(h5_path, "r") as f:
 
         coords = f["coords"][:]
+
         features = f["features"][:]
 
     print("Coords:", coords.shape)
@@ -234,12 +302,16 @@ for model_idx, (model_name, h5_path) in enumerate(FEATURE_PATHS.items()):
     # NORMALIZE FEATURES
     # --------------------------------------------------------
 
-    features = features.astype(np.float32)
+    features = features.astype(
+        np.float32
+    )
 
     features = features / np.linalg.norm(
+
         features,
         axis=1,
         keepdims=True
+
     )
 
     # --------------------------------------------------------
@@ -253,44 +325,80 @@ for model_idx, (model_name, h5_path) in enumerate(FEATURE_PATHS.items()):
         center_x = x + PATCH_SIZE / 2
         center_y = y + PATCH_SIZE / 2
 
-        pt = Point(center_x, center_y)
+        pt = Point(
+            center_x,
+            center_y
+        )
 
         inside = tumor_region.contains(pt)
 
-        labels.append(int(inside))
+        labels.append(
+            int(inside)
+        )
 
     labels = np.array(labels)
 
-    tumor_indices = np.where(labels == 1)[0]
+    tumor_indices = np.where(
+        labels == 1
+    )[0]
 
-    print("Tumor patches:", len(tumor_indices))
+    print(
+        "Tumor patches:",
+        len(tumor_indices)
+    )
+
+    # --------------------------------------------------------
+    # PATCH EXTRACTION
+    # --------------------------------------------------------
+
+    def get_patch(idx):
+
+        x, y = coords[idx]
+
+        x = int(x)
+        y = int(y)
+
+        patch = wsi_img[
+            y:y+PATCH_SIZE,
+            x:x+PATCH_SIZE
+        ]
+
+        return patch
 
     # --------------------------------------------------------
     # RANDOM TUMOR QUERIES
     # --------------------------------------------------------
 
-    random.seed(42)
-    np.random.seed(42)
-
     query_indices = np.random.choice(
+
         tumor_indices,
-        min(NUM_QUERIES, len(tumor_indices)),
+
+        min(
+            NUM_QUERIES,
+            len(tumor_indices)
+        ),
+
         replace=False
+
     )
 
     # --------------------------------------------------------
-    # INITIALIZE RETRIEVAL METHODS
+    # INITIALIZE METHODS
     # --------------------------------------------------------
 
     methods = {
 
-        "BruteForce": BruteForce(features),
+        "BruteForce":
+        BruteForce(features),
 
-        "FAISSFlat": FAISSFlat(features),
+        "FAISSFlat":
+        FAISSFlat(features),
 
-        "FAISSIVF": FAISSIVF(features),
+        "FAISSIVF":
+        FAISSIVF(features),
 
-        "FAISSHNSW": FAISSHNSW(features)
+        "FAISSHNSW":
+        FAISSHNSW(features)
 
     }
 
@@ -300,7 +408,12 @@ for model_idx, (model_name, h5_path) in enumerate(FEATURE_PATHS.items()):
     # TEST RETRIEVAL METHODS
     # --------------------------------------------------------
 
-    for method_idx, (method_name, method) in enumerate(methods.items()):
+    for method_idx, (
+
+        method_name,
+        method
+
+    ) in enumerate(methods.items()):
 
         print(f"\nRunning {method_name}")
 
@@ -313,44 +426,135 @@ for model_idx, (model_name, h5_path) in enumerate(FEATURE_PATHS.items()):
         # MULTIPLE QUERY EVALUATION
         # ----------------------------------------------------
 
-        for query_idx in query_indices:
+        for q_num, query_idx in enumerate(query_indices):
 
             query_embedding = features[query_idx]
 
             start = time.time()
 
             retrieved_indices = method.search(
+
                 query_embedding,
                 TOP_K + 1
+
             )
 
-            latency = (time.time() - start) * 1000
+            latency = (
+                time.time() - start
+            ) * 1000
 
             retrieved_indices = retrieved_indices[
                 retrieved_indices != query_idx
             ][:TOP_K]
 
+            # ------------------------------------------------
+            # METRICS
+            # ------------------------------------------------
+
             p5 = precision_at_k(
+
                 retrieved_indices,
                 labels,
                 5
+
             )
 
             p10 = precision_at_k(
+
                 retrieved_indices,
                 labels,
                 10
+
             )
 
             ap = average_precision(
+
                 retrieved_indices,
                 labels
+
             )
 
             p5_scores.append(p5)
             p10_scores.append(p10)
             map_scores.append(ap)
             latency_scores.append(latency)
+
+            # ------------------------------------------------
+            # SAVE VISUALIZATION
+            # ------------------------------------------------
+
+            if q_num == 0:
+
+                fig, axes = plt.subplots(
+                    4,
+                    4,
+                    figsize=(12, 12)
+                )
+
+                axes = axes.flatten()
+
+                # QUERY PATCH
+
+                axes[0].imshow(
+                    get_patch(query_idx)
+                )
+
+                axes[0].set_title("QUERY")
+
+                axes[0].axis("off")
+
+                # RETRIEVED PATCHES
+
+                for i, idx in enumerate(retrieved_indices):
+
+                    axes[i + 1].imshow(
+                        get_patch(idx)
+                    )
+
+                    label = (
+                        "Tumor"
+                        if labels[idx] == 1
+                        else "BG"
+                    )
+
+                    axes[i + 1].set_title(label)
+
+                    axes[i + 1].axis("off")
+
+                for j in range(
+                    len(retrieved_indices) + 1,
+                    16
+                ):
+
+                    axes[j].axis("off")
+
+                plt.suptitle(
+
+                    f"{model_name} + {method_name}\n"
+                    f"P@5={p5:.2f} | "
+                    f"P@10={p10:.2f} | "
+                    f"mAP={ap:.2f} | "
+                    f"Latency={latency:.2f}ms"
+
+                )
+
+                plt.tight_layout()
+
+                plt.savefig(
+
+                    os.path.join(
+
+                        RESULTS_DIR,
+
+                        f"{model_name}_{method_name}_retrieval.png"
+
+                    ),
+
+                    dpi=300
+
+                )
+
+                plt.close()
 
         # ----------------------------------------------------
         # AVERAGE METRICS
@@ -375,7 +579,10 @@ for model_idx, (model_name, h5_path) in enumerate(FEATURE_PATHS.items()):
 
         }
 
-        heatmap_matrix[model_idx, method_idx] = avg_map
+        heatmap_matrix[
+            model_idx,
+            method_idx
+        ] = avg_map
 
 # ============================================================
 # BARPLOT : BEST mAP PER MODEL
@@ -389,6 +596,7 @@ for model_name in FEATURE_PATHS.keys():
     maps = [
 
         all_results[model_name][method]["mAP"]
+
         for method in RETRIEVAL_METHODS
 
     ]
@@ -400,20 +608,25 @@ for model_name in FEATURE_PATHS.keys():
 plt.figure(figsize=(8,5))
 
 plt.bar(
+
     model_names,
     best_maps
+
 )
 
 for i, v in enumerate(best_maps):
 
     plt.text(
+
         i,
         v,
         f"{v:.3f}",
         ha="center"
+
     )
 
 plt.ylabel("Best mAP")
+
 plt.xlabel("Foundation Model")
 
 plt.title(
@@ -425,8 +638,10 @@ plt.tight_layout()
 plt.savefig(
 
     os.path.join(
+
         RESULTS_DIR,
         "foundation_model_map_comparison.png"
+
     ),
 
     dpi=300
@@ -436,7 +651,7 @@ plt.savefig(
 plt.close()
 
 # ============================================================
-# HEATMAP : MODEL vs RETRIEVAL
+# HEATMAP
 # ============================================================
 
 plt.figure(figsize=(10,6))
@@ -449,44 +664,50 @@ im = plt.imshow(
 plt.colorbar(im)
 
 plt.xticks(
+
     np.arange(len(RETRIEVAL_METHODS)),
     RETRIEVAL_METHODS
+
 )
 
 plt.yticks(
+
     np.arange(len(model_names)),
     model_names
-)
 
-# values inside cells
+)
 
 for i in range(len(model_names)):
 
     for j in range(len(RETRIEVAL_METHODS)):
 
         plt.text(
+
             j,
             i,
             f"{heatmap_matrix[i,j]:.3f}",
+
             ha="center",
             va="center",
             color="white"
+
         )
 
 plt.xlabel("Retrieval Algorithm")
+
 plt.ylabel("Foundation Model")
 
-plt.title(
-    "mAP Heatmap"
-)
+plt.title("mAP Heatmap")
 
 plt.tight_layout()
 
 plt.savefig(
 
     os.path.join(
+
         RESULTS_DIR,
         "model_vs_retrieval_heatmap.png"
+
     ),
 
     dpi=300
@@ -500,8 +721,10 @@ plt.close()
 # ============================================================
 
 summary_path = os.path.join(
+
     RESULTS_DIR,
     "foundation_model_summary.txt"
+
 )
 
 with open(summary_path, "w") as f:
@@ -509,7 +732,9 @@ with open(summary_path, "w") as f:
     for model_name, vals in all_results.items():
 
         f.write("\n================================================\n")
+
         f.write(f"{model_name}\n")
+
         f.write("================================================\n")
 
         for method_name, metrics in vals.items():
