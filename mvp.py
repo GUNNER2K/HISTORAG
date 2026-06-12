@@ -4,6 +4,7 @@ import h5py
 import random
 import numpy as np
 import matplotlib.pyplot as plt
+import openslide
 
 from PIL import Image
 from pathlib import Path
@@ -12,41 +13,33 @@ from pathlib import Path
 # CONFIG SELECTION
 # ============================================================
 
-# USE_DEMO = True
+USE_DEMO = False
 
-# if USE_DEMO:
+if USE_DEMO:
 
-#     from configs.demo_config import *
+    from configs.demo_config import *
 
-# else:
+else:
 
-#     from configs.full_config import *
-
+    from configs.full_config import *
 
 # ============================================================
 # REPRODUCIBILITY
 # ============================================================
 
-random.seed(42)
-np.random.seed(42)
+random.seed(RANDOM_SEED)
+np.random.seed(RANDOM_SEED)
 
 # ============================================================
-# PATHS
+# RESULTS DIRECTORY
 # ============================================================
 
-ROOT_DIR = Path(__file__).resolve().parent
+RESULTS_DIR = Path(RESULTS_DIR) / "mvp"
 
-H5_PATH = ROOT_DIR / "demo_data" / "sample_uni.h5"
-
-WSI_PATH = ROOT_DIR / "demo_data" / "small_sample_wsi.jpg"
-
-RESULTS_DIR = ROOT_DIR / "results" / "mvp"
-
-os.makedirs(RESULTS_DIR, exist_ok=True)
-
-PATCH_SIZE = 256
-TOP_K = 10
-NUM_QUERIES = 5
+os.makedirs(
+    RESULTS_DIR,
+    exist_ok=True
+)
 
 # ============================================================
 # LOAD H5
@@ -54,9 +47,10 @@ NUM_QUERIES = 5
 
 def load_h5(path):
 
-    print(f"\nLoading features from: {path}")
+    print(f"\nLoading features from:\n{path}")
 
     with h5py.File(path, 'r') as f:
+
         features = f['features'][:]
         coords = f['coords'][:]
 
@@ -65,28 +59,186 @@ def load_h5(path):
 
     return features, coords
 
+# ============================================================
+# STORAGE
+# ============================================================
 
-start_time = time.time()
+all_features = []
+all_coords = []
+all_slide_ids = []
 
-X, coords = load_h5(H5_PATH)
+slide_objects = {}
+slide_paths = {}
+
+# ============================================================
+# DEMO MODE
+# ============================================================
+
+if not USE_DEMO == False:
+
+    print("\n================================================")
+    print("RUNNING DEMO MODE")
+    print("================================================")
+
+    X, coords = load_h5(H5_PATH)
+
+    all_features.append(X)
+
+    all_coords.append(coords)
+
+    all_slide_ids.append(
+        np.zeros(len(X))
+    )
+
+    # --------------------------------------------------------
+    # LOAD DEMO IMAGE
+    # --------------------------------------------------------
+
+    demo_img = Image.open(
+        WSI_PATH
+    ).convert("RGB")
+
+    demo_img = np.array(
+        demo_img
+    )
+
+    slide_objects[0] = demo_img
+
+    slide_paths[0] = WSI_PATH
+
+# ============================================================
+# FULL MODE
+# ============================================================
+
+else:
+
+    print("\n================================================")
+    print("RUNNING FULL MODE")
+    print("================================================")
+
+    # --------------------------------------------------------
+    # FIND ALL H5 FILES
+    # --------------------------------------------------------
+
+    all_h5_files = list(
+        H5_ROOT.rglob("*.h5")
+    )
+
+    print(f"\nFound {len(all_h5_files)} H5 files")
+
+    if MAX_WSIS is not None:
+
+        all_h5_files = all_h5_files[:MAX_WSIS]
+
+    # --------------------------------------------------------
+    # LOAD EACH WSI
+    # --------------------------------------------------------
+
+    for slide_idx, h5_file in enumerate(all_h5_files):
+
+        try:
+
+            # ------------------------------------------------
+            # MATCH SVS
+            # ------------------------------------------------
+
+            stem = h5_file.stem
+
+            svs_path = (
+
+                WSI_ROOT
+                / f"{stem}.svs"
+
+            )
+
+            if not svs_path.exists():
+
+                print(f"Missing WSI:\n{svs_path}")
+
+                continue
+
+            # ------------------------------------------------
+            # LOAD FEATURES
+            # ------------------------------------------------
+
+            features, coords = load_h5(h5_file)
+
+            all_features.append(
+                features
+            )
+
+            all_coords.append(
+                coords
+            )
+
+            all_slide_ids.append(
+
+                np.full(
+                    len(features),
+                    slide_idx
+                )
+
+            )
+
+            # ------------------------------------------------
+            # LOAD WSI
+            # ------------------------------------------------
+
+            slide = openslide.OpenSlide(
+                str(svs_path)
+            )
+
+            slide_objects[slide_idx] = slide
+
+            slide_paths[slide_idx] = svs_path
+
+
+        except Exception as e:
+
+            print(f"\nSkipping {h5_file.name}")
+
+            print(e)
+
+        if slide_idx % 10 == 0:
+            print('\nProcessed 10 files...')
+# ============================================================
+# CONCATENATE
+# ============================================================
+
+X = np.vstack(
+    all_features
+)
+
+coords = np.vstack(
+    all_coords
+)
+
+slide_ids = np.concatenate(
+    all_slide_ids
+)
+
+print("\n================================================")
+print("FINAL DATASET")
+print("================================================")
+
+print("Total patches:", len(X))
+print("Feature dimension:", X.shape[1])
+
+# ============================================================
+# NORMALIZATION
+# ============================================================
 
 print("\nNormalizing features")
 
 X = X.astype(np.float32)
 
-X = X / np.linalg.norm(X, axis=1, keepdims=True)
+X = X / np.linalg.norm(
 
-# ============================================================
-# LOAD DEMO WSI PNG
-# ============================================================
+    X,
+    axis=1,
+    keepdims=True
 
-print("\nLoading sample_wsi.png")
-
-wsi_img = Image.open(WSI_PATH).convert("RGB")
-
-wsi_img = np.array(wsi_img)
-
-print("Demo image shape:", wsi_img.shape)
+)
 
 # ============================================================
 # PATCH EXTRACTION
@@ -99,9 +251,40 @@ def get_patch(idx):
     x = int(x)
     y = int(y)
 
-    patch = wsi_img[y:y + PATCH_SIZE, x:x + PATCH_SIZE]
+    slide_id = slide_ids[idx]
 
-    return patch
+    # --------------------------------------------------------
+    # DEMO MODE
+    # --------------------------------------------------------
+
+    if USE_DEMO:
+
+        img = slide_objects[slide_id]
+
+        patch = img[
+            y:y + PATCH_SIZE,
+            x:x + PATCH_SIZE
+        ]
+
+        return patch
+
+    # --------------------------------------------------------
+    # FULL MODE
+    # --------------------------------------------------------
+
+    else:
+
+        slide = slide_objects[slide_id]
+
+        patch = slide.read_region(
+
+            (x, y),
+            0,
+            (PATCH_SIZE, PATCH_SIZE)
+
+        ).convert("RGB")
+
+        return np.array(patch)
 
 # ============================================================
 # BRUTE FORCE RETRIEVAL
@@ -115,51 +298,99 @@ def retrieve(query_idx, top_k=10):
 
     sims = X @ q
 
-    indices = np.argsort(-sims)[:top_k + 1]
+    indices = np.argsort(
+        -sims
+    )[:top_k + 1]
 
-    # remove query itself
+    # --------------------------------------------------------
+    # REMOVE QUERY ITSELF
+    # --------------------------------------------------------
 
-    indices = indices[indices != query_idx][:top_k]
+    indices = indices[
+        indices != query_idx
+    ][:top_k]
 
     print("Retrieved indices:", indices)
 
     return indices
 
+# ============================================================
+# VISUALIZATION
+# ============================================================
 
-def visualize(query_idx, retrieved_indices, save_path):
+def visualize(
 
-    print(f"\nSaving visualization to:\n{save_path}")
+    query_idx,
+    retrieved_indices,
+    save_path
 
-    fig, axes = plt.subplots(1, TOP_K + 1, figsize=(20, 4))
+):
+
+    print(f"\nSaving visualization:\n{save_path}")
+
+    fig, axes = plt.subplots(
+
+        1,
+        TOP_K + 1,
+
+        figsize=(20, 4)
+
+    )
 
     # --------------------------------------------------------
     # QUERY
     # --------------------------------------------------------
 
-    axes[0].imshow(get_patch(query_idx))
+    axes[0].imshow(
+        get_patch(query_idx)
+    )
 
     axes[0].set_title("QUERY")
 
     axes[0].axis("off")
 
     # --------------------------------------------------------
-    # RETRIEVED PATCHES
+    # RETRIEVED
     # --------------------------------------------------------
 
     for i, idx in enumerate(retrieved_indices):
 
-        axes[i + 1].imshow(get_patch(idx))
+        axes[i + 1].imshow(
+            get_patch(idx)
+        )
 
-        axes[i + 1].set_title(f"Top-{i+1}")
+        slide_name = Path(
+
+            str(
+                slide_paths[
+                    slide_ids[idx]
+                ]
+            )
+
+        ).stem
+
+        axes[i + 1].set_title(
+
+            f"Top-{i+1}"
+
+        )
 
         axes[i + 1].axis("off")
 
     plt.tight_layout()
 
-    plt.savefig(save_path, dpi=300)
+    plt.savefig(
+        save_path,
+        dpi=300
+    )
 
     plt.close()
 
+# ============================================================
+# RUN MVP
+# ============================================================
+
+start_time = time.time()
 
 print("\nStarting MVP retrieval...\n")
 
@@ -167,18 +398,46 @@ for i in range(NUM_QUERIES):
 
     print(f"\n================ QUERY {i+1} ================")
 
-    query_idx = np.random.randint(0, len(X))
+    query_idx = np.random.randint(
+        0,
+        len(X)
+    )
 
-    retrieved_indices = retrieve(query_idx, top_k=TOP_K)
+    retrieved_indices = retrieve(
 
-    save_path = os.path.join(RESULTS_DIR, f"query_{i+1}.png")
+        query_idx,
+        top_k=TOP_K
 
-    visualize(query_idx, retrieved_indices, save_path)
+    )
+
+    save_path = (
+
+        RESULTS_DIR
+        / f"query_{i+1}.png"
+
+    )
+
+    visualize(
+
+        query_idx,
+        retrieved_indices,
+        save_path
+
+    )
+
+# ============================================================
+# FINAL
+# ============================================================
 
 end_time = time.time()
 
-print("\nFinished all queries.")
+print("\n================================================")
+print("FINISHED")
+print("================================================")
 
-print(f"Total runtime: {end_time - start_time:.2f} seconds")
+print(
+    f"\nTotal runtime: "
+    f"{end_time - start_time:.2f} seconds"
+)
 
-print(f"Results saved in:\n{RESULTS_DIR}")
+print(f"\nResults saved in:\n{RESULTS_DIR}")
