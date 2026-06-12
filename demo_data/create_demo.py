@@ -7,9 +7,9 @@ from pathlib import Path
 # PATHS
 # ============================================================
 
-ROOT_DIR = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parent
 
-DEMO_DIR = ROOT / "demo_data"
+DEMO_DIR = ROOT
 
 DEMO_DIR.mkdir(
     exist_ok=True,
