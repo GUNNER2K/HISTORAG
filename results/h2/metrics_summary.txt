@@ -1,0 +1,24 @@
+
+BruteForce
+P@5: 0.8800
+P@10: 0.8100
+mAP: 0.8684
+latency: 0.6397
+
+FAISSFlat
+P@5: 0.8800
+P@10: 0.8100
+mAP: 0.8684
+latency: 0.0684
+
+FAISSIVF
+P@5: 0.8800
+P@10: 0.8100
+mAP: 0.8684
+latency: 0.0661
+
+FAISSHNSW
+P@5: 0.8800
+P@10: 0.8100
+mAP: 0.8684
+latency: 0.0613

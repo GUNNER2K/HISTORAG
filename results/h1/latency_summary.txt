@@ -1,0 +1,4 @@
+BruteForce: 0.0511 ms
+FAISSFlat: 0.0344 ms
+FAISSIVF: 0.0261 ms
+FAISSHNSW: 0.0254 ms
