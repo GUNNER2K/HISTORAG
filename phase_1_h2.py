@@ -49,8 +49,7 @@ GEOJSON_PATH = (
 RESULTS_DIR = (
     ROOT_DIR
     / "results"
-    / "comparison"
-    / "uni"
+    / "h2"
 )
 
 os.makedirs(

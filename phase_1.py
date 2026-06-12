@@ -30,7 +30,7 @@ H5_PATH = (
 RESULTS_DIR = (
     ROOT_DIR
     / "results"
-    / "latency"
+    / "h1"
 )
 
 os.makedirs(
