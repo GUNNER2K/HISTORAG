@@ -1,0 +1,15 @@
+numpy
+pandas
+matplotlib
+plotly
+scikit-learn
+h5py
+faiss-cpu
+faiss-gpu
+openslide-python
+openslide-bin
+Pillow
+shapely
+jupyter
+ipykernel
+
